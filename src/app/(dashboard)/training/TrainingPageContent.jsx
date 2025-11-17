@@ -45,6 +45,7 @@ export default function TrainingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const materialId = searchParams.get("id");
+  const openInquiryParam = searchParams.get("openInquiry") === "true";
   const isViewMode = !!materialId;
 
   const [materials, setMaterials] = useState([]);
@@ -62,6 +63,31 @@ export default function TrainingPageContent() {
       fetchMaterial();
     }
   }, [materialId, isViewMode]);
+
+  useEffect(() => {
+    if (openInquiryParam) {
+      if (isViewMode) {
+        setIsInquiryOpen(true);
+      } else {
+        setIsInquiryOpenList(true);
+      }
+    }
+  }, [openInquiryParam, isViewMode]);
+
+  useEffect(() => {
+    const handleGlobalInquiryOpen = () => {
+      if (isViewMode) {
+        setIsInquiryOpen(true);
+      } else {
+        setIsInquiryOpenList(true);
+      }
+    };
+
+    window.addEventListener("open-inquiry-panel", handleGlobalInquiryOpen);
+    return () => {
+      window.removeEventListener("open-inquiry-panel", handleGlobalInquiryOpen);
+    };
+  }, [isViewMode]);
 
   // 링크만 있는 경우 자동 리다이렉트
   useEffect(() => {
@@ -148,14 +174,6 @@ export default function TrainingPageContent() {
               <h1 className="text-3xl font-semibold text-slate-900">교육 자료</h1>
               <p className="mt-1 text-sm text-slate-500">교육 자료를 확인하고 학습할 수 있습니다.</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsInquiryOpenList(!isInquiryOpenList)}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#967d5a] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#7a6548]"
-            >
-              <MessageSquare className="h-4 w-4" />
-              문의하기
-            </button>
           </div>
 
           {/* 검색 및 필터 */}
@@ -419,19 +437,9 @@ export default function TrainingPageContent() {
             </div>
           </div>
 
-          {/* 문의하기 패널 (고정) */}
-          <InquiryPanel trainingMaterialId={materialId} isOpen={isInquiryOpen} onClose={() => setIsInquiryOpen(false)} />
-        </div>
-
-        {/* 문의하기 버튼 (고정) */}
-        <button
-          type="button"
-          onClick={() => setIsInquiryOpen(!isInquiryOpen)}
-          className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full bg-[#967d5a] px-6 py-3 text-sm font-medium text-white shadow-lg transition hover:bg-[#7a6548]"
-        >
-          <MessageSquare className="h-5 w-5" />
-          문의하기
-        </button>
+        {/* 문의하기 패널 (고정) */}
+        <InquiryPanel trainingMaterialId={materialId} isOpen={isInquiryOpen} onClose={() => setIsInquiryOpen(false)} />
+      </div>
       </div>
     );
   }

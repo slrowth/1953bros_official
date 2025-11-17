@@ -1,4 +1,5 @@
 import "./globals.css";
+import GlobalContactButton from "@/components/common/GlobalContactButton";
 
 export const metadata = {
   title: "1953형제돼지국밥 프랜차이즈 플랫폼",
@@ -16,8 +17,15 @@ export default function RootLayout({ children }) {
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
         />
       </head>
-      <body className="antialiased" style={{ fontFamily: "Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif" }}>
+      <body
+        className="antialiased"
+        style={{
+          fontFamily:
+            "Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif",
+        }}
+      >
         {children}
+        <GlobalContactButton />
       </body>
     </html>
   );
