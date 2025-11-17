@@ -9,6 +9,10 @@ export default function GlobalContactButton() {
   const pathname = usePathname();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+  if (!pathname || pathname === "/") {
+    return null;
+  }
+
   const handleClick = useCallback(() => {
     if (typeof window !== "undefined" && pathname?.startsWith("/training")) {
       window.dispatchEvent(new CustomEvent("open-inquiry-panel"));
