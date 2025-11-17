@@ -1,0 +1,58 @@
+export const products = [
+  {
+    id: "espresso-beans-1kg",
+    name: "에스프레소 원두 1kg",
+    sku: "BEAN-1000",
+    description: "하우스 블렌드 에스프레소 원두로 모든 매장에서 균일한 맛을 제공합니다.",
+    price: 32000,
+    unitLabel: "₩32,000 / bag",
+    currency: "KRW",
+    uom: "bag",
+    weightGrams: 1000,
+    taxRate: 0.1,
+    categoryId: "coffee-beans",
+    categoryName: "커피 원두",
+    isShippable: true,
+    leadTimeDays: 2,
+    stock: 58,
+  },
+  {
+    id: "iced-cup-360ml",
+    name: "아이스 전용 컵 360ml (200개입)",
+    sku: "CUP-360-200",
+    description: "친환경 소재의 투명 컵으로 모든 차가운 음료에 사용 가능합니다.",
+    price: 24000,
+    unitLabel: "₩24,000 / case",
+    currency: "KRW",
+    uom: "case",
+    weightGrams: 4800,
+    taxRate: 0.1,
+    categoryId: "disposable",
+    categoryName: "일회용품",
+    isShippable: true,
+    leadTimeDays: 3,
+    stock: 120,
+  },
+  {
+    id: "barista-training-kit",
+    name: "바리스타 교육 키트",
+    sku: "KIT-EDU-BARISTA",
+    description: "신규 직원 교육을 위한 레시피 북, 계량 도구, 원두 샘플로 구성된 패키지입니다.",
+    price: 85000,
+    unitLabel: "₩85,000 / set",
+    currency: "KRW",
+    uom: "set",
+    weightGrams: 2700,
+    taxRate: 0.1,
+    categoryId: "training",
+    categoryName: "교육 키트",
+    isShippable: true,
+    leadTimeDays: 5,
+    stock: 16,
+  },
+];
+
+export function getProductById(id) {
+  return products.find((product) => product.id === id);
+}
+
