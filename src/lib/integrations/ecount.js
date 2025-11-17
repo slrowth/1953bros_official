@@ -108,34 +108,88 @@ export async function sendOrderToEcount(orderId) {
 
     const zone = keyRecord.zone || "";
     const sessionId = keyRecord.session_id || keyRecord.api_key;
+
+    // ZONE 검증
+    if (!zone || zone.trim() === "") {
+      console.error("[ECOUNT] ❌ ZONE이 설정되지 않았습니다. API 키 관리 페이지에서 ZONE을 입력해주세요. (예: B, D 등)");
+      return;
+    }
+
+    if (!sessionId || sessionId.trim() === "") {
+      console.error("[ECOUNT] ❌ SESSION_ID 또는 API_KEY가 설정되지 않았습니다.");
+      return;
+    }
+
     const endpoint = `https://oapi${zone}.ecount.com/OAPI/V2/SaleOrder/SaveSaleOrder?SESSION_ID=${sessionId}`;
 
     console.log(`[ECOUNT] 전송 URL: ${endpoint.replace(sessionId, "***")}`);
     console.log(`[ECOUNT] 전송 데이터:`, JSON.stringify({ SaleOrderList: saleOrderList }, null, 2));
 
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ SaleOrderList: saleOrderList }),
-    });
+    try {
+      console.log(`[ECOUNT] API 호출 시작: ${endpoint.replace(sessionId, "***")}`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30초 타임아웃
 
-    console.log(`[ECOUNT] 응답 상태: ${response.status} ${response.statusText}`);
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({ SaleOrderList: saleOrderList }),
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      const text = await response.text();
-      console.error("[ECOUNT] API 호출 실패:", response.status, text);
-      return;
-    }
+      clearTimeout(timeoutId);
 
-    const result = await response.json();
-    console.log(`[ECOUNT] 응답 데이터:`, JSON.stringify(result, null, 2));
-    
-    if (result?.Data?.FailCnt > 0) {
-      console.error("[ECOUNT] ERP 전송 실패:", JSON.stringify(result?.Data?.ResultDetails || []));
-    } else {
-      console.log("[ECOUNT] ✅ ERP 전송 성공! SlipNos:", result?.Data?.SlipNos);
+      console.log(`[ECOUNT] 응답 상태: ${response.status} ${response.statusText}`);
+
+      const responseText = await response.text();
+      console.log(`[ECOUNT] 응답 본문 (원본):`, responseText);
+
+      if (!response.ok) {
+        console.error("[ECOUNT] ❌ API 호출 실패:", response.status, responseText);
+        return;
+      }
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("[ECOUNT] ❌ 응답 JSON 파싱 실패:", parseError, "원본:", responseText);
+        return;
+      }
+
+      console.log(`[ECOUNT] 응답 데이터 (파싱됨):`, JSON.stringify(result, null, 2));
+      
+      if (result?.Data?.FailCnt > 0) {
+        console.error("[ECOUNT] ❌ ERP 전송 실패:", JSON.stringify(result?.Data?.ResultDetails || []));
+        console.error("[ECOUNT] 실패 상세:", result?.Data);
+      } else if (result?.Data?.SuccessCnt > 0) {
+        console.log("[ECOUNT] ✅ ERP 전송 성공! SlipNos:", result?.Data?.SlipNos);
+        console.log("[ECOUNT] 성공 상세:", result?.Data);
+      } else {
+        console.warn("[ECOUNT] ⚠️ 응답에 성공/실패 정보가 없습니다:", result);
+      }
+    } catch (fetchError) {
+      if (fetchError.name === 'AbortError') {
+        console.error("[ECOUNT] ❌ 요청 타임아웃 (30초 초과)");
+      } else if (fetchError.code === 'ENOTFOUND' || fetchError.code === 'EAI_AGAIN') {
+        console.error("[ECOUNT] ❌ DNS 해석 실패 - URL을 확인해주세요:", endpoint.replace(sessionId, "***"));
+      } else if (fetchError.code === 'ECONNREFUSED') {
+        console.error("[ECOUNT] ❌ 연결 거부됨 - 이카운트 서버에 연결할 수 없습니다");
+      } else if (fetchError.code === 'ETIMEDOUT') {
+        console.error("[ECOUNT] ❌ 연결 타임아웃 - 이카운트 서버 응답이 없습니다");
+      } else {
+        console.error("[ECOUNT] ❌ 네트워크 오류:", {
+          message: fetchError.message,
+          code: fetchError.code,
+          cause: fetchError.cause,
+          stack: fetchError.stack
+        });
+      }
+      console.error("[ECOUNT] 전송 시도한 URL:", endpoint.replace(sessionId, "***"));
     }
   } catch (error) {
     console.error("[ECOUNT] ❌ ERP 연동 오류:", error.message, error.stack);

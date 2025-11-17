@@ -64,15 +64,27 @@ export default function ApiKeysPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("해당 키를 삭제할까요?")) return;
+    if (!confirm("해당 키를 삭제할까요? 이 작업은 되돌릴 수 없습니다.")) return;
+    
     try {
-      const response = await fetch(`/api/integrations/ecount/keys/${id}`, { method: "DELETE" });
+      const response = await fetch(`/api/integrations/ecount/keys/${id}`, { 
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      
       const data = await response.json();
+      
       if (!response.ok) {
         throw new Error(data.error || "삭제에 실패했습니다.");
       }
+      
+      // 성공 시 목록에서 제거
       setKeys((prev) => prev.filter((key) => key.id !== id));
+      alert("API 키가 삭제되었습니다.");
     } catch (err) {
+      console.error("Delete error:", err);
       alert(err.message || "API 키 삭제 중 오류가 발생했습니다.");
     }
   };
