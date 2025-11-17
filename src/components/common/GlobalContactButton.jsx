@@ -9,8 +9,9 @@ export default function GlobalContactButton() {
   const pathname = usePathname();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const isAuthPage = !pathname || pathname === "/" || pathname === "/register";
-  if (isAuthPage) {
+  const isHiddenRoute =
+    !pathname || pathname === "/" || pathname === "/register" || pathname.startsWith("/admin");
+  if (isHiddenRoute) {
     return null;
   }
 

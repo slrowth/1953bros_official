@@ -11,6 +11,7 @@ import {
   Bell,
   BookOpen,
   ClipboardCheck,
+  MessageSquare,
 } from "lucide-react";
 import UserProfileDropdown from "@/components/common/UserProfileDropdown";
 import { NotificationProvider } from "@/components/notifications/NotificationProvider";
@@ -65,8 +66,13 @@ const adminNavItems = [
     children: [
       { name: "교육 자료 관리", href: "/admin/training/new" },
       { name: "교육 자료 등록", href: "/admin/training/new?view=create" },
-      { name: "문의 관리", href: "/admin/training/inquiries" },
+      { name: "교육 문의 관리", href: "/admin/training/inquiries" },
     ],
+  },
+  {
+    name: "문의 관리",
+    href: "/admin/support/inquiries",
+    icon: MessageSquare,
   },
   {
     name: "품질점검",

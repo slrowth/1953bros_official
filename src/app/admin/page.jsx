@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { UserCheck, ShoppingBag, Package, Bell, BookOpen, TrendingUp } from "lucide-react";
+import { UserCheck, ShoppingBag, Package, Bell, BookOpen, TrendingUp, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import {
   LineChart,
@@ -23,6 +23,7 @@ export default function AdminDashboardPage() {
     newOrders: 0,
     totalProducts: 0,
     activeNotices: 0,
+    newInquiries: 0,
   });
   const [loading, setLoading] = useState(true);
   const [stores, setStores] = useState([]);
@@ -73,11 +74,18 @@ export default function AdminDashboardPage() {
         .select("*", { count: "exact", head: true })
         .eq("is_active", true);
 
+      // 신규 문의 수
+      const { count: newInquiryCount } = await supabase
+        .from("support_inquiries")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "OPEN");
+
       setStats({
         pendingApprovals: pendingCount || 0,
         newOrders: newOrdersCount || 0,
         totalProducts: productsCount || 0,
         activeNotices: noticesCount || 0,
+        newInquiries: newInquiryCount || 0,
       });
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
@@ -94,6 +102,14 @@ export default function AdminDashboardPage() {
       href: "/admin/approvals",
       color: "bg-blue-50 text-blue-600",
       iconColor: "text-blue-600",
+    },
+    {
+      title: "새 문의",
+      value: stats.newInquiries,
+      icon: MessageSquare,
+      href: "/admin/support/inquiries",
+      color: "bg-rose-50 text-rose-600",
+      iconColor: "text-rose-600",
     },
     {
       title: "신규 주문",
@@ -358,14 +374,14 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* 통계 카드 */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mb-8">
         {statCards.map((card) => {
           const Icon = card.icon;
           return (
             <Link
               key={card.title}
               href={card.href}
-              className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition hover:shadow-md hover:border-[#967d5a]"
+              className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:shadow-md hover:border-[#967d5a]"
             >
               <div className="flex items-center justify-between">
                 <div>

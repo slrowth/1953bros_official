@@ -11,15 +11,48 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const limit = Number(searchParams.get("limit") || 5);
+    const limit = Number(searchParams.get("limit") || 20);
+    const status = searchParams.get("status");
+    const search = searchParams.get("search");
 
     const supabase = await createClient();
-    const { data, error } = await supabase
+    let query = supabase
       .from("support_inquiries")
-      .select("*")
-      .eq("user_id", user.id)
+      .select(
+        `
+          id,
+          category,
+          subject,
+          message,
+          page_path,
+          status,
+          created_at,
+          updated_at,
+          user:users!support_inquiries_user_id_fkey (
+            id,
+            name,
+            email,
+            store_name
+          )
+        `
+      )
       .order("created_at", { ascending: false })
       .limit(limit);
+
+    if (user.role !== "ADMIN") {
+      query = query.eq("user_id", user.id);
+    }
+
+    if (status && status !== "ALL") {
+      query = query.eq("status", status);
+    }
+
+    if (search) {
+      const likeValue = `%${search}%`;
+      query = query.or(`subject.ilike.${likeValue},message.ilike.${likeValue},page_path.ilike.${likeValue}`);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Support inquiry fetch error:", error);
