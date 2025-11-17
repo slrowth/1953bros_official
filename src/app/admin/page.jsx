@@ -68,11 +68,11 @@ export default function AdminDashboardPage() {
         .select("*", { count: "exact", head: true })
         .eq("is_active", true);
 
-      // 활성 공지사항 수
+      // 공지사항 수 (published_at이 있는 것만)
       const { count: noticesCount } = await supabase
         .from("notices")
         .select("*", { count: "exact", head: true })
-        .eq("is_active", true);
+        .not("published_at", "is", null);
 
       // 신규 문의 수
       const { count: newInquiryCount } = await supabase

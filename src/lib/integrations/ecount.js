@@ -13,6 +13,7 @@ function formatDate(date) {
 }
 
 export async function sendOrderToEcount(orderId) {
+  console.log(`[ECOUNT] 주문 ${orderId} 전송 시작`);
   try {
     const supabase = await createClient();
 
@@ -25,9 +26,11 @@ export async function sendOrderToEcount(orderId) {
       .maybeSingle();
 
     if (keyError || !keyRecord) {
-      console.warn("[ECOUNT] API key가 설정되지 않았습니다.");
+      console.warn("[ECOUNT] API key가 설정되지 않았습니다.", keyError);
       return;
     }
+
+    console.log(`[ECOUNT] API 키 발견: ${keyRecord.label}, ZONE: ${keyRecord.zone || "없음"}`);
 
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -98,6 +101,9 @@ export async function sendOrderToEcount(orderId) {
     const sessionId = keyRecord.session_id || keyRecord.api_key;
     const endpoint = `https://oapi${zone}.ecount.com/OAPI/V2/SaleOrder/SaveSaleOrder?SESSION_ID=${sessionId}`;
 
+    console.log(`[ECOUNT] 전송 URL: ${endpoint.replace(sessionId, "***")}`);
+    console.log(`[ECOUNT] 전송 데이터:`, JSON.stringify({ SaleOrderList: saleOrderList }, null, 2));
+
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -106,20 +112,24 @@ export async function sendOrderToEcount(orderId) {
       body: JSON.stringify({ SaleOrderList: saleOrderList }),
     });
 
+    console.log(`[ECOUNT] 응답 상태: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
       const text = await response.text();
-      console.error("[ECOUNT] API 호출 실패:", text);
+      console.error("[ECOUNT] API 호출 실패:", response.status, text);
       return;
     }
 
     const result = await response.json();
+    console.log(`[ECOUNT] 응답 데이터:`, JSON.stringify(result, null, 2));
+    
     if (result?.Data?.FailCnt > 0) {
       console.error("[ECOUNT] ERP 전송 실패:", JSON.stringify(result?.Data?.ResultDetails || []));
     } else {
-      console.log("[ECOUNT] ERP 전송 성공", result?.Data?.SlipNos);
+      console.log("[ECOUNT] ✅ ERP 전송 성공! SlipNos:", result?.Data?.SlipNos);
     }
   } catch (error) {
-    console.error("[ECOUNT] ERP 연동 오류:", error);
+    console.error("[ECOUNT] ❌ ERP 연동 오류:", error.message, error.stack);
   }
 }
 
