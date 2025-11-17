@@ -246,7 +246,11 @@ export async function POST(request) {
       },
     };
 
-    sendOrderToEcount(order.id);
+    // 이카운트 ERP로 주문 전송 (비동기, 에러가 발생해도 주문 생성에는 영향 없음)
+    console.log(`[ORDER] 주문 생성 완료: ${order.id}, 이카운트 전송 시작`);
+    sendOrderToEcount(order.id).catch((error) => {
+      console.error("[ORDER] 이카운트 전송 중 예외 발생:", error);
+    });
 
     return NextResponse.json(responseBody);
   } catch (error) {

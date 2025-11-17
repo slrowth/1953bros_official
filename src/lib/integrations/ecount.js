@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 
 function formatDate(date) {
   if (!date) return "";
@@ -15,9 +15,12 @@ function formatDate(date) {
 export async function sendOrderToEcount(orderId) {
   console.log(`[ECOUNT] 주문 ${orderId} 전송 시작`);
   try {
+    // RLS를 우회하기 위해 서비스 역할 클라이언트 사용
+    const adminSupabase = createAdminClient();
     const supabase = await createClient();
 
-    const { data: keyRecord, error: keyError } = await supabase
+    // 서버 사이드에서 RLS를 우회하여 조회 (서비스 역할 사용)
+    const { data: keyRecord, error: keyError } = await adminSupabase
       .from("integration_keys")
       .select("*")
       .eq("service", "ECOUNT")
@@ -25,8 +28,14 @@ export async function sendOrderToEcount(orderId) {
       .limit(1)
       .maybeSingle();
 
-    if (keyError || !keyRecord) {
-      console.warn("[ECOUNT] API key가 설정되지 않았습니다.", keyError);
+    if (keyError) {
+      console.error("[ECOUNT] ❌ API 키 조회 오류:", JSON.stringify(keyError, null, 2));
+      console.error("[ECOUNT] 오류 상세:", keyError.message, keyError.code, keyError.details);
+      return;
+    }
+
+    if (!keyRecord) {
+      console.warn("[ECOUNT] ⚠️ 활성화된 API 키가 등록되지 않았습니다. 관리자 페이지(/admin/integrations/api-keys)에서 API 키를 등록하고 활성화해주세요.");
       return;
     }
 
