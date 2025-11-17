@@ -9,9 +9,24 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 });
     }
 
-    const { id } = await params;
+    // Next.js 15+에서 params가 Promise일 수 있음
+    const resolvedParams = params instanceof Promise ? await params : params;
+    let id = resolvedParams?.id;
+    
+    // params에서 id를 가져오지 못한 경우 URL에서 직접 추출
+    if (!id) {
+      const url = new URL(request.url);
+      const pathParts = url.pathname.split('/');
+      const idFromUrl = pathParts[pathParts.length - 1];
+      
+      if (idFromUrl && idFromUrl !== 'keys' && idFromUrl.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        id = idFromUrl;
+        console.log("[ECOUNT DELETE] ID extracted from URL:", id);
+      }
+    }
     
     if (!id) {
+      console.error("[ECOUNT DELETE] No ID found. params:", resolvedParams, "URL:", request.url);
       return NextResponse.json({ error: "API 키 ID가 필요합니다." }, { status: 400 });
     }
 
@@ -27,7 +42,7 @@ export async function DELETE(request, { params }) {
       .single();
 
     if (checkError || !existingKey) {
-      console.error("Ecount key delete - key not found:", checkError);
+      console.error("Ecount key delete - key not found:", checkError, "id:", id);
       return NextResponse.json({ error: "삭제할 API 키를 찾을 수 없습니다." }, { status: 404 });
     }
 
