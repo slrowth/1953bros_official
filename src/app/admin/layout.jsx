@@ -75,6 +75,11 @@ const adminNavItems = [
     icon: MessageSquare,
   },
   {
+    name: "API 키 관리",
+    href: "/admin/integrations/api-keys",
+    icon: FileText,
+  },
+  {
     name: "품질점검",
     href: "/admin/quality",
     icon: ClipboardCheck,
