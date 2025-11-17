@@ -2,6 +2,7 @@ import { ORDER_STATUS_MAP } from "@/constants/orderStatus";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/server/auth";
 import { NextResponse } from "next/server";
+import { sendOrderToEcount } from "@/lib/integrations/ecount";
 
 export const STATUS_MAP = ORDER_STATUS_MAP;
 
@@ -234,7 +235,7 @@ export async function POST(request) {
       );
     }
 
-    return NextResponse.json({
+    const responseBody = {
       success: true,
       order: {
         id: order.id,
@@ -243,7 +244,11 @@ export async function POST(request) {
         status: order.status,
         placedAt: order.placed_at,
       },
-    });
+    };
+
+    sendOrderToEcount(order.id);
+
+    return NextResponse.json(responseBody);
   } catch (error) {
     console.error("Create order API error:", error);
     return NextResponse.json(
