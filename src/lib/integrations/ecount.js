@@ -107,129 +107,84 @@ export async function sendOrderToEcount(orderId) {
     }
 
     const zone = keyRecord.zone || "";
-    const apiKey = keyRecord.api_key || "";
-    const loginId = keyRecord.session_id || ""; // 로그인 ID
+    const apiCertKey = keyRecord.api_key || ""; // API_CERT_KEY
+    const userId = keyRecord.session_id || ""; // USER_ID
+    const comCode = keyRecord.config?.com_code || ""; // COM_CODE (config에서 가져오거나 기본값 사용)
 
     console.log(`[ECOUNT] 키 정보 확인:`, {
       zone: zone || "없음",
-      apiKey: apiKey ? `${apiKey.substring(0, 5)}...` : "없음",
-      loginId: loginId || "없음",
-      session_id: keyRecord.session_id || "없음",
+      apiCertKey: apiCertKey ? `${apiCertKey.substring(0, 5)}...` : "없음",
+      userId: userId || "없음",
+      comCode: comCode || "없음",
     });
 
     // ZONE 검증
     if (!zone || zone.trim() === "") {
-      console.error("[ECOUNT] ❌ ZONE이 설정되지 않았습니다. API 키 관리 페이지에서 ZONE을 입력해주세요. (예: CB, B, D 등)");
+      console.error("[ECOUNT] ❌ ZONE이 설정되지 않았습니다. API 키 관리 페이지에서 ZONE을 입력해주세요. (예: CB, B, D, C 등)");
       return;
     }
 
-    if (!apiKey || apiKey.trim() === "") {
-      console.error("[ECOUNT] ❌ API_KEY가 설정되지 않았습니다.");
+    if (!apiCertKey || apiCertKey.trim() === "") {
+      console.error("[ECOUNT] ❌ API_CERT_KEY가 설정되지 않았습니다.");
       return;
     }
 
-    if (!loginId || loginId.trim() === "") {
-      console.error("[ECOUNT] ❌ 로그인 ID(SESSION ID 필드)가 설정되지 않았습니다.");
-      console.error("[ECOUNT] ⚠️ '별도 SESSION ID' 필드에 로그인 ID를 입력해주세요.");
+    if (!userId || userId.trim() === "") {
+      console.error("[ECOUNT] ❌ USER_ID가 설정되지 않았습니다.");
+      console.error("[ECOUNT] ⚠️ '별도 SESSION ID' 필드에 USER_ID를 입력해주세요.");
       return;
     }
 
-    console.log(`[ECOUNT] 인증 정보: ZONE=${zone}, API_KEY=${apiKey ? "있음" : "없음"}, LOGIN_ID=${loginId ? "있음" : "없음"}`);
+    // COM_CODE가 없으면 기본값 사용 (또는 에러 처리)
+    if (!comCode || comCode.trim() === "") {
+      console.warn("[ECOUNT] ⚠️ COM_CODE가 설정되지 않았습니다. 기본값을 사용합니다.");
+    }
+
+    console.log(`[ECOUNT] 인증 정보: ZONE=${zone}, API_CERT_KEY=${apiCertKey ? "있음" : "없음"}, USER_ID=${userId ? "있음" : "없음"}, COM_CODE=${comCode || "기본값"}`);
 
     // 1단계: 로그인 API 호출하여 SESSION_ID 받기
-    // 이카운트 로그인 API는 여러 경로가 있을 수 있음
-    const possibleLoginEndpoints = [
-      `https://oapi${zone}.ecount.com/OAPI/V2/Login/Login`,
-      `https://oapi${zone}.ecount.com/OAPI/V2/Login`,
-      `https://oapi${zone}.ecount.com/OAPI/Login/Login`,
-      `https://oapi${zone}.ecount.com/OAPI/Login`,
-    ];
+    // 이카운트 로그인 API: https://oapi{ZONE}.ecount.com/OAPI/V2/OAPILogin
+    const loginEndpoint = `https://oapi${zone}.ecount.com/OAPI/V2/OAPILogin`;
+    console.log(`[ECOUNT] 로그인 API 호출: ${loginEndpoint}`);
 
     let sessionId;
-    let loginSuccess = false;
+    try {
+      // 이카운트 로그인 API Request Body 형식
+      const loginRequestBody = {
+        COM_CODE: comCode || "80001", // 기본값 또는 config에서 가져온 값
+        USER_ID: userId,
+        API_CERT_KEY: apiCertKey,
+        LAN_TYPE: "ko-KR", // 한국어
+        ZONE: zone,
+      };
 
-    for (const loginEndpoint of possibleLoginEndpoints) {
-      console.log(`[ECOUNT] 로그인 API 시도: ${loginEndpoint}`);
-      
-      try {
-        // 방법 1: POST with JSON body
-        let loginResponse = await fetch(loginEndpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            ID: loginId,
-            PWD: apiKey,
-          }),
-        });
+      console.log(`[ECOUNT] 로그인 요청 데이터:`, {
+        ...loginRequestBody,
+        API_CERT_KEY: "***",
+      });
 
-        let loginResult = await loginResponse.json();
-        console.log(`[ECOUNT] 로그인 응답 (POST JSON):`, JSON.stringify(loginResult, null, 2));
+      const loginResponse = await fetch(loginEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(loginRequestBody),
+      });
 
-        if (loginResult?.Status === "200" && loginResult?.Data?.SESSION_ID) {
-          sessionId = loginResult.Data.SESSION_ID;
-          console.log(`[ECOUNT] ✅ 로그인 성공, SESSION_ID 획득: ${sessionId.substring(0, 10)}...`);
-          loginSuccess = true;
-          break;
-        }
+      const loginResult = await loginResponse.json();
+      console.log(`[ECOUNT] 로그인 응답:`, JSON.stringify(loginResult, null, 2));
 
-        // 방법 2: POST with query parameters
-        if (!loginSuccess) {
-          const loginEndpointWithParams = `${loginEndpoint}?ID=${encodeURIComponent(loginId)}&PWD=${encodeURIComponent(apiKey)}`;
-          console.log(`[ECOUNT] 로그인 API 시도 (Query Params): ${loginEndpointWithParams.replace(apiKey, "***")}`);
-          
-          loginResponse = await fetch(loginEndpointWithParams, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
-
-          loginResult = await loginResponse.json();
-          console.log(`[ECOUNT] 로그인 응답 (Query Params):`, JSON.stringify(loginResult, null, 2));
-
-          if (loginResult?.Status === "200" && loginResult?.Data?.SESSION_ID) {
-            sessionId = loginResult.Data.SESSION_ID;
-            console.log(`[ECOUNT] ✅ 로그인 성공, SESSION_ID 획득: ${sessionId.substring(0, 10)}...`);
-            loginSuccess = true;
-            break;
-          }
-        }
-
-        // 방법 3: GET with query parameters
-        if (!loginSuccess) {
-          const loginEndpointWithParams = `${loginEndpoint}?ID=${encodeURIComponent(loginId)}&PWD=${encodeURIComponent(apiKey)}`;
-          console.log(`[ECOUNT] 로그인 API 시도 (GET): ${loginEndpointWithParams.replace(apiKey, "***")}`);
-          
-          loginResponse = await fetch(loginEndpointWithParams, {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
-
-          loginResult = await loginResponse.json();
-          console.log(`[ECOUNT] 로그인 응답 (GET):`, JSON.stringify(loginResult, null, 2));
-
-          if (loginResult?.Status === "200" && loginResult?.Data?.SESSION_ID) {
-            sessionId = loginResult.Data.SESSION_ID;
-            console.log(`[ECOUNT] ✅ 로그인 성공, SESSION_ID 획득: ${sessionId.substring(0, 10)}...`);
-            loginSuccess = true;
-            break;
-          }
-        }
-
-      } catch (loginError) {
-        console.warn(`[ECOUNT] 로그인 API 호출 오류 (${loginEndpoint}):`, loginError.message);
-        continue; // 다음 엔드포인트 시도
+      if (loginResult?.Status === "200" && loginResult?.Data?.SESSION_ID) {
+        sessionId = loginResult.Data.SESSION_ID;
+        console.log(`[ECOUNT] ✅ 로그인 성공, SESSION_ID 획득: ${sessionId.substring(0, 10)}...`);
+      } else {
+        const errorMsg = loginResult?.Error?.Message || loginResult?.Errors?.[0]?.Message || "로그인 실패";
+        console.error(`[ECOUNT] ❌ 로그인 실패:`, errorMsg);
+        console.error(`[ECOUNT] 로그인 응답 전체:`, JSON.stringify(loginResult, null, 2));
+        return;
       }
-    }
-
-    if (!loginSuccess || !sessionId) {
-      console.error(`[ECOUNT] ❌ 모든 로그인 방법 실패`);
-      console.error(`[ECOUNT] ⚠️ 이카운트 API 문서를 확인하여 정확한 로그인 API 엔드포인트와 방식을 확인해주세요.`);
-      console.error(`[ECOUNT] 시도한 엔드포인트:`, possibleLoginEndpoints);
+    } catch (loginError) {
+      console.error("[ECOUNT] ❌ 로그인 API 호출 오류:", loginError.message);
       return;
     }
 
