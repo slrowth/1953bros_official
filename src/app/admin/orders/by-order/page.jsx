@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Search, ChevronDown, ChevronRight, Edit, Calendar, Package, Store, Filter, ArrowUpDown } from "lucide-react";
+import { calculateOrderGrossTotal } from "@/utils/orderPrice";
 
 const currencyFormatter = new Intl.NumberFormat("ko-KR", {
   style: "currency",
@@ -322,7 +323,7 @@ export default function OrdersByOrderPage() {
                     <div className="text-right">
                       <p className="text-xs text-slate-500">제품 {order.items.length}종 · 수량 {totalQuantity}</p>
                       <p className="mt-1 text-lg font-semibold text-slate-900">
-                        {currencyFormatter.format(order.totalAmount)}
+                        {currencyFormatter.format(calculateOrderGrossTotal(order))}
                       </p>
                     </div>
                     {!isEditing && (
@@ -431,13 +432,11 @@ export default function OrdersByOrderPage() {
                       ))}
                     </div>
                     <div className="mt-4 flex justify-between border-t border-neutral-200 pt-4">
-                      <div className="text-sm text-slate-500">
-                        <p>부가세: {currencyFormatter.format(order.vatAmount)}</p>
-                      </div>
+                      <div />
                       <div className="text-right">
                         <p className="text-sm text-slate-500">총 주문 금액</p>
                         <p className="mt-1 text-xl font-semibold text-slate-900">
-                          {currencyFormatter.format(order.totalAmount)}
+                          {currencyFormatter.format(calculateOrderGrossTotal(order))}
                         </p>
                       </div>
                     </div>

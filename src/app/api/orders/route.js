@@ -149,6 +149,19 @@ function formatDateTime(date) {
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
+// 부가세 포함 금액에서 부가세 몫을 계산하는 함수
+function calculateVatPortion(grossAmount, taxRate) {
+  if (!Number.isFinite(grossAmount) || grossAmount <= 0) {
+    return 0;
+  }
+  if (!Number.isFinite(taxRate) || taxRate <= 0) {
+    return 0;
+  }
+  const safeTaxRate = Math.max(0, taxRate);
+  const vatShare = grossAmount * (safeTaxRate / (1 + safeTaxRate));
+  return Math.round(vatShare);
+}
+
 /**
  * 주문 생성 API
  * POST /api/orders
@@ -184,6 +197,7 @@ export async function POST(request) {
     const franchiseId = store.franchise_id;
 
     let totalAmount = 0;
+    let vatAmountAccumulator = 0;
     const orderItemsData = [];
 
     for (const item of items) {
@@ -209,18 +223,30 @@ export async function POST(request) {
         );
       }
 
-      const itemTotal = parseFloat(unitPrice) * quantity;
-      totalAmount += itemTotal;
+      const grossUnitPrice = parseFloat(unitPrice);
+      if (!Number.isFinite(grossUnitPrice) || grossUnitPrice <= 0) {
+        return NextResponse.json(
+          { error: "제품 단가가 올바르지 않습니다." },
+          { status: 400 }
+        );
+      }
+
+      const itemGrossTotal = Math.round(grossUnitPrice * quantity);
+      const itemTaxRate = Number(product.tax_rate) || 0;
+      const itemVatTotal = calculateVatPortion(itemGrossTotal, itemTaxRate);
+
+      totalAmount += itemGrossTotal;
+      vatAmountAccumulator += itemVatTotal;
 
       orderItemsData.push({
         product_id: productId,
         quantity,
-        unit_price: parseFloat(unitPrice),
+        unit_price: grossUnitPrice,
       });
     }
 
-    const vatAmount = Math.round(totalAmount * 0.1);
-    const finalTotalAmount = totalAmount + vatAmount;
+    const vatAmount = Math.round(vatAmountAccumulator);
+    const finalTotalAmount = Math.round(totalAmount);
 
     const orderCode = await generateUniqueOrderCode(supabase).catch((error) => {
       console.error("Order code generation error:", error);

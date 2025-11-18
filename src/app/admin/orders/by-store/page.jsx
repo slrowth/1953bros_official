@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Search, ChevronDown, ChevronRight, Store, Building2, Package, TrendingUp } from "lucide-react";
+import { calculateOrderGrossTotal } from "@/utils/orderPrice";
 
 const currencyFormatter = new Intl.NumberFormat("ko-KR", {
   style: "currency",
@@ -152,9 +153,11 @@ export default function OrdersByStorePage() {
           newOrdersCount: 0, // 1주일 이내 신규주문
         };
       }
+      const orderGrossTotal = calculateOrderGrossTotal(order);
+
       grouped[franchiseId].stores[storeId].orders.push(order);
       grouped[franchiseId].stores[storeId].totalOrders++;
-      grouped[franchiseId].stores[storeId].totalAmount += order.totalAmount;
+      grouped[franchiseId].stores[storeId].totalAmount += orderGrossTotal;
       grouped[franchiseId].stores[storeId].statusCounts[order.statusCode] =
         (grouped[franchiseId].stores[storeId].statusCounts[order.statusCode] || 0) + 1;
 
@@ -166,7 +169,7 @@ export default function OrdersByStorePage() {
       }
 
       grouped[franchiseId].totalOrders++;
-      grouped[franchiseId].totalAmount += order.totalAmount;
+      grouped[franchiseId].totalAmount += orderGrossTotal;
       grouped[franchiseId].statusCounts[order.statusCode] =
         (grouped[franchiseId].statusCounts[order.statusCode] || 0) + 1;
     });
@@ -431,7 +434,7 @@ export default function OrdersByStorePage() {
                                         </div>
                                         <div className="text-right ml-4">
                                           <p className="text-sm font-semibold text-slate-900">
-                                            {currencyFormatter.format(order.totalAmount)}
+                                            {currencyFormatter.format(calculateOrderGrossTotal(order))}
                                           </p>
                                         </div>
                                       </button>
@@ -460,14 +463,11 @@ export default function OrdersByStorePage() {
                                               </div>
                                             ))}
                                           </div>
-                                          <div className="mt-4 flex justify-between border-t border-neutral-200 pt-4">
-                                            <div className="text-sm text-slate-500">
-                                              <p>부가세: {currencyFormatter.format(order.vatAmount)}</p>
-                                            </div>
+                                          <div className="mt-4 flex justify-end border-t border-neutral-200 pt-4">
                                             <div className="text-right">
                                               <p className="text-sm text-slate-500">총 주문 금액</p>
                                               <p className="mt-1 text-lg font-semibold text-slate-900">
-                                                {currencyFormatter.format(order.totalAmount)}
+                                                {currencyFormatter.format(calculateOrderGrossTotal(order))}
                                               </p>
                                             </div>
                                           </div>

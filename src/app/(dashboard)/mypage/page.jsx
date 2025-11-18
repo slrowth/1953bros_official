@@ -12,6 +12,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { ORDER_STATUS_MAP } from "@/constants/orderStatus";
+import { calculateOrderGrossTotal } from "@/utils/orderPrice";
 
 const currencyFormatter = new Intl.NumberFormat("ko-KR", {
   style: "currency",
@@ -154,8 +155,9 @@ export default function MyPage() {
   const summary = useMemo(() => {
     return orders.reduce(
       (acc, order) => {
+        const orderGrossTotal = calculateOrderGrossTotal(order);
         acc.total += 1;
-        acc.amount += Number(order.totalAmount || 0);
+        acc.amount += orderGrossTotal;
         acc[order.statusCode] = (acc[order.statusCode] || 0) + 1;
         return acc;
       },
@@ -294,7 +296,7 @@ export default function MyPage() {
                       <div className="text-right">
                         <p className="text-xs text-slate-400">결제 예정 금액</p>
                         <p className="text-base font-semibold text-slate-900">
-                          {currencyFormatter.format(order.totalAmount)}
+                          {currencyFormatter.format(calculateOrderGrossTotal(order))}
                         </p>
                       </div>
                       <StatusPill statusCode={order.statusCode} statusTone={order.statusTone} />
@@ -336,7 +338,9 @@ export default function MyPage() {
                         </ul>
                         <div className="flex items-center justify-between border-t border-neutral-100 px-4 py-3 text-sm font-semibold">
                           <span>합계</span>
-                          <span className="text-[#967d5a]">{currencyFormatter.format(order.totalAmount)}</span>
+                          <span className="text-[#967d5a]">
+                            {currencyFormatter.format(calculateOrderGrossTotal(order))}
+                          </span>
                         </div>
                       </div>
                     </div>
