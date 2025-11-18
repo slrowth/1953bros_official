@@ -107,19 +107,62 @@ export async function sendOrderToEcount(orderId) {
     }
 
     const zone = keyRecord.zone || "";
-    const sessionId = keyRecord.session_id || keyRecord.api_key;
+    const apiKey = keyRecord.api_key || "";
+    const loginId = keyRecord.session_id || ""; // 로그인 ID
 
     // ZONE 검증
     if (!zone || zone.trim() === "") {
-      console.error("[ECOUNT] ❌ ZONE이 설정되지 않았습니다. API 키 관리 페이지에서 ZONE을 입력해주세요. (예: B, D 등)");
+      console.error("[ECOUNT] ❌ ZONE이 설정되지 않았습니다. API 키 관리 페이지에서 ZONE을 입력해주세요. (예: CB, B, D 등)");
       return;
     }
 
-    if (!sessionId || sessionId.trim() === "") {
-      console.error("[ECOUNT] ❌ SESSION_ID 또는 API_KEY가 설정되지 않았습니다.");
+    if (!apiKey || apiKey.trim() === "") {
+      console.error("[ECOUNT] ❌ API_KEY가 설정되지 않았습니다.");
       return;
     }
 
+    if (!loginId || loginId.trim() === "") {
+      console.error("[ECOUNT] ❌ 로그인 ID(SESSION ID 필드)가 설정되지 않았습니다.");
+      return;
+    }
+
+    console.log(`[ECOUNT] 인증 정보: ZONE=${zone}, API_KEY=${apiKey ? "있음" : "없음"}, LOGIN_ID=${loginId ? "있음" : "없음"}`);
+
+    // 1단계: 로그인 API 호출하여 SESSION_ID 받기
+    const loginEndpoint = `https://oapi${zone}.ecount.com/OAPI/V2/Login/Login`;
+    console.log(`[ECOUNT] 로그인 API 호출: ${loginEndpoint}`);
+
+    let sessionId;
+    try {
+      const loginResponse = await fetch(loginEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ID: loginId,
+          PWD: apiKey, // API_KEY를 비밀번호로 사용
+        }),
+      });
+
+      const loginResult = await loginResponse.json();
+      console.log(`[ECOUNT] 로그인 응답:`, JSON.stringify(loginResult, null, 2));
+
+      if (loginResult?.Status === "200" && loginResult?.Data?.SESSION_ID) {
+        sessionId = loginResult.Data.SESSION_ID;
+        console.log(`[ECOUNT] ✅ 로그인 성공, SESSION_ID 획득: ${sessionId.substring(0, 10)}...`);
+      } else {
+        const errorMsg = loginResult?.Error?.Message || loginResult?.Errors?.[0]?.Message || "로그인 실패";
+        console.error(`[ECOUNT] ❌ 로그인 실패:`, errorMsg);
+        console.error(`[ECOUNT] 로그인 응답 전체:`, JSON.stringify(loginResult, null, 2));
+        return;
+      }
+    } catch (loginError) {
+      console.error("[ECOUNT] ❌ 로그인 API 호출 오류:", loginError.message);
+      return;
+    }
+
+    // 2단계: 받은 SESSION_ID로 주문 API 호출
     const endpoint = `https://oapi${zone}.ecount.com/OAPI/V2/SaleOrder/SaveSaleOrder?SESSION_ID=${sessionId}`;
 
     console.log(`[ECOUNT] 전송 URL: ${endpoint.replace(sessionId, "***")}`);
@@ -163,7 +206,22 @@ export async function sendOrderToEcount(orderId) {
 
       console.log(`[ECOUNT] 응답 데이터 (파싱됨):`, JSON.stringify(result, null, 2));
       
-      if (result?.Data?.FailCnt > 0) {
+      // 이카운트 API 응답 처리
+      if (result?.Status === "500" || result?.Errors?.length > 0) {
+        const errorCode = result?.Errors?.[0]?.Code || result?.Error?.Code;
+        const errorMessage = result?.Errors?.[0]?.Message || result?.Error?.Message || "알 수 없는 오류";
+        
+        if (errorCode === "EXP00001" || errorMessage.includes("login") || errorMessage.includes("Please login")) {
+          console.error("[ECOUNT] ❌ 인증 오류: SESSION_ID가 유효하지 않거나 만료되었습니다.");
+          console.error("[ECOUNT] 해결 방법:");
+          console.error("  1. 이카운트에서 새로운 SESSION_ID를 발급받아 등록하세요.");
+          console.error("  2. 또는 API_KEY를 사용하는 경우, 이카운트에서 API_KEY가 SESSION_ID로 사용 가능한지 확인하세요.");
+          console.error("  3. 이카운트 로그인 API를 먼저 호출하여 SESSION_ID를 받아야 할 수 있습니다.");
+        } else {
+          console.error("[ECOUNT] ❌ ERP 전송 실패:", errorMessage, "Code:", errorCode);
+        }
+        console.error("[ECOUNT] 전체 응답:", JSON.stringify(result, null, 2));
+      } else if (result?.Data?.FailCnt > 0) {
         console.error("[ECOUNT] ❌ ERP 전송 실패:", JSON.stringify(result?.Data?.ResultDetails || []));
         console.error("[ECOUNT] 실패 상세:", result?.Data);
       } else if (result?.Data?.SuccessCnt > 0) {
