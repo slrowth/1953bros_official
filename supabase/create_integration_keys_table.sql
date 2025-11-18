@@ -27,3 +27,5 @@ FOR UPDATE USING (EXISTS (SELECT 1 FROM users u WHERE u.id = auth.uid() AND u.ro
 CREATE POLICY "관리자만 삭제" ON integration_keys
 FOR DELETE USING (EXISTS (SELECT 1 FROM users u WHERE u.id = auth.uid() AND u.role = 'ADMIN'));
 
+
+

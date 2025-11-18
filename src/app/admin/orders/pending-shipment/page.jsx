@@ -69,6 +69,7 @@ export default function PendingShipmentPage() {
         items.push({
           ...item,
           orderId: order.id,
+          orderCode: order.orderCode || order.id,
           orderDate: order.orderedAt,
           deliveryDate: order.deliveryDate,
           store: order.store,
@@ -91,13 +92,15 @@ export default function PendingShipmentPage() {
     // 검색 필터 적용
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (item) =>
+      filtered = filtered.filter((item) => {
+        const orderNumber = (item.orderCode || item.orderId || "").toLowerCase();
+        return (
           item.name.toLowerCase().includes(query) ||
           item.sku?.toLowerCase().includes(query) ||
-          item.orderId.toLowerCase().includes(query) ||
+          orderNumber.includes(query) ||
           item.store.name.toLowerCase().includes(query)
-      );
+        );
+      });
     }
 
     return filtered;
@@ -235,7 +238,7 @@ export default function PendingShipmentPage() {
                       <div className="mt-1 flex items-center gap-4 text-xs text-slate-500">
                         <span className="flex items-center gap-1">
                           <Package className="h-3 w-3" />
-                          주문 #{item.orderId.slice(0, 8)}
+                          주문 #{item.orderCode || item.orderId}
                         </span>
                         <span className="flex items-center gap-1">
                           <Store className="h-3 w-3" />

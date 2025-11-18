@@ -3,8 +3,39 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/server/auth";
 import { NextResponse } from "next/server";
 import { sendOrderToEcount } from "@/lib/integrations/ecount";
+import crypto from "crypto";
 
 export const STATUS_MAP = ORDER_STATUS_MAP;
+
+const ORDER_CODE_LENGTH = 10;
+const ORDER_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function generateOrderCode() {
+  const randomBytes = crypto.randomBytes(ORDER_CODE_LENGTH);
+  let code = "";
+  for (let i = 0; i < ORDER_CODE_LENGTH; i += 1) {
+    const index = randomBytes[i] % ORDER_CODE_CHARS.length;
+    code += ORDER_CODE_CHARS[index];
+  }
+  return code;
+}
+
+async function generateUniqueOrderCode(supabase, maxAttempts = 5) {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const code = generateOrderCode();
+    const { data } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("order_code", code)
+      .limit(1)
+      .maybeSingle();
+
+    if (!data) {
+      return code;
+    }
+  }
+  throw new Error("고유 주문번호 생성에 실패했습니다.");
+}
 
 export async function resolveStoreForUser(supabase, userId) {
   const { data: userData, error: userError } = await supabase
@@ -191,11 +222,24 @@ export async function POST(request) {
     const vatAmount = Math.round(totalAmount * 0.1);
     const finalTotalAmount = totalAmount + vatAmount;
 
+    const orderCode = await generateUniqueOrderCode(supabase).catch((error) => {
+      console.error("Order code generation error:", error);
+      return null;
+    });
+
+    if (!orderCode) {
+      return NextResponse.json(
+        { error: "주문 번호 생성 중 오류가 발생했습니다." },
+        { status: 500 }
+      );
+    }
+
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
         store_id: storeId,
         franchise_id: franchiseId,
+        order_code: orderCode,
         status: "NEW",
         payment_status: "PENDING",
         total_amount: finalTotalAmount,
@@ -239,6 +283,7 @@ export async function POST(request) {
       success: true,
       order: {
         id: order.id,
+        orderCode: order.order_code,
         totalAmount: finalTotalAmount,
         vatAmount,
         status: order.status,
@@ -247,10 +292,15 @@ export async function POST(request) {
     };
 
     // 이카운트 ERP로 주문 전송 (비동기, 에러가 발생해도 주문 생성에는 영향 없음)
-    console.log(`[ORDER] 주문 생성 완료: ${order.id}, 이카운트 전송 시작`);
-    sendOrderToEcount(order.id).catch((error) => {
-      console.error("[ORDER] 이카운트 전송 중 예외 발생:", error);
-    });
+    console.log(`[ORDER] ✅ 주문 생성 완료: ${order.id}`);
+    console.log(`[ORDER] 🚀 이카운트 전송 시작: ${order.id}`);
+    sendOrderToEcount(order.id)
+      .then(() => {
+        console.log(`[ORDER] ✅ 이카운트 전송 완료: ${order.id}`);
+      })
+      .catch((error) => {
+        console.error(`[ORDER] ❌ 이카운트 전송 중 예외 발생: ${order.id}`, error);
+      });
 
     return NextResponse.json(responseBody);
   } catch (error) {
@@ -290,6 +340,7 @@ export async function GET(request) {
       .select(
         `
           id,
+          order_code,
           status,
           payment_status,
           placed_at,
@@ -372,6 +423,7 @@ export async function GET(request) {
 
       return {
         id: order.id,
+        orderCode: order.order_code,
         orderedAt: formatDateTime(order.placed_at),
         deliveryDate: formatDate(order.delivery_date),
         status: statusInfo.label,

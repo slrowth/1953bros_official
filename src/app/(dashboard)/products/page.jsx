@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
-import { Minus, Plus, Search, Trash2, Loader2, X, Package, Calendar, ChevronDown, ChevronRight } from "lucide-react";
+import { Minus, Plus, Search, Trash2, Loader2, X, Package, Calendar, ChevronDown, ChevronRight, XCircle } from "lucide-react";
 const currencyFormatter = new Intl.NumberFormat("ko-KR", {
   style: "currency",
   currency: "KRW",
@@ -18,7 +18,7 @@ export default function ProductsPage() {
   const [orderHistory, setOrderHistory] = useState([]);
   const [loadingOrderHistory, setLoadingOrderHistory] = useState(true);
   const [orderHistoryError, setOrderHistoryError] = useState("");
-  const [cancellingOrderId, setCancellingOrderId] = useState("");
+  const [cancelInfoOrder, setCancelInfoOrder] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [orderItems, setOrderItems] = useState([]);
   const [loadingOrderItems, setLoadingOrderItems] = useState(false);
@@ -48,36 +48,9 @@ export default function ProductsPage() {
     }
   }, []);
 
-  const handleCancelOrder = useCallback(
-    async (orderId) => {
-      if (!orderId) {
-        return;
-      }
-      const confirmed = window.confirm("해당 주문을 취소하시겠습니까?");
-      if (!confirmed) {
-        return;
-      }
-
-      try {
-        setCancellingOrderId(orderId);
-        const response = await fetch(`/api/orders/${orderId}`, {
-          method: "DELETE",
-        });
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error || "주문 취소에 실패했습니다.");
-        }
-        await fetchOrderHistory();
-        alert("주문이 취소되었습니다.");
-      } catch (error) {
-        console.error("Cancel order error:", error);
-        alert(error.message || "주문 취소 중 오류가 발생했습니다.");
-      } finally {
-        setCancellingOrderId("");
-      }
-    },
-    [fetchOrderHistory]
-  );
+  const handleShowCancelInfo = useCallback((order) => {
+    setCancelInfoOrder(order);
+  }, []);
 
   // 제품 목록 가져오기
   useEffect(() => {
@@ -641,13 +614,43 @@ export default function ProductsPage() {
               orders={orderHistory}
               loading={loadingOrderHistory}
               error={orderHistoryError}
-              onCancelOrder={handleCancelOrder}
-              cancellingOrderId={cancellingOrderId}
+              onCancelOrder={handleShowCancelInfo}
             />
           </div>
         </aside>
       </div>
       </div>
+
+      {cancelInfoOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-3xl border border-neutral-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+                <XCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-red-600">웹으로 주문취소 불가</p>
+                <h3 className="mt-1 text-lg font-semibold text-slate-900">카카오톡 채널로 문의해주세요</h3>
+                <p className="mt-3 text-sm text-slate-600">
+                  카카오톡채널 <span className="font-semibold">‘웨이브앤바이브’</span>로 취소하고자 하는 주문번호를 남겨주세요.
+                </p>
+                <p className="mt-3 rounded-2xl border border-dashed border-neutral-200 bg-neutral-50 px-4 py-2 text-sm font-semibold text-slate-900">
+                  주문번호: {cancelInfoOrder?.orderCode || cancelInfoOrder?.id}
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setCancelInfoOrder(null)}
+                className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-neutral-50"
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 제품 상세 모달 */}
       {selectedProduct && (
@@ -807,7 +810,7 @@ function StatusBadge({ tone, children }) {
   );
 }
 
-function OrderHistoryPanel({ orders, loading, error, onCancelOrder, cancellingOrderId }) {
+function OrderHistoryPanel({ orders, loading, error, onCancelOrder }) {
   if (loading) {
     return (
       <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
@@ -889,6 +892,7 @@ function OrderHistoryPanel({ orders, loading, error, onCancelOrder, cancellingOr
   const statusOrder = ["입금대기", "주문확인", "배송중", "배송완료", "취소됨"];
 
   const renderOrder = (order) => {
+    const orderNumber = order.orderCode || order.id;
     const totalAmount = order.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
     const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
     const isExpanded = !!expandedOrders[order.id];
@@ -918,7 +922,7 @@ function OrderHistoryPanel({ orders, loading, error, onCancelOrder, cancellingOr
         {isExpanded && (
           <div className="border-t border-neutral-100 bg-neutral-50 px-4 py-4">
             <div className="mb-3 space-y-1 text-xs text-slate-400">
-              <div>주문번호: {order.id}</div>
+              <div>주문번호: {orderNumber}</div>
               <div>납품예정: {order.deliveryDate}</div>
             </div>
             {order.statusCode === "NEW" && (
@@ -927,19 +931,11 @@ function OrderHistoryPanel({ orders, loading, error, onCancelOrder, cancellingOr
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onCancelOrder?.(order.id);
+                    onCancelOrder?.(order);
                   }}
-                  disabled={cancellingOrderId === order.id}
-                  className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:border-neutral-200 disabled:bg-neutral-100 disabled:text-neutral-400"
+                  className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-100"
                 >
-                  {cancellingOrderId === order.id ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      취소 중...
-                    </>
-                  ) : (
-                    "주문 취소"
-                  )}
+                  주문 취소
                 </button>
               </div>
             )}

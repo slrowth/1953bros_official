@@ -389,6 +389,7 @@ export default function OrdersByStorePage() {
                             <div className="border-t border-neutral-200 bg-white p-4">
                               <div className="space-y-2">
                                 {sortOrdersByStatus(storeData.orders).map((order) => {
+                                  const orderNumber = order.orderCode || order.id;
                                   const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
                                   const status = STATUS_OPTIONS.find((s) => s.value === order.statusCode);
                                   const isOrderExpanded = expandedOrders[order.id];
@@ -413,7 +414,7 @@ export default function OrdersByStorePage() {
                                           <div className="flex-1">
                                             <div className="flex items-center gap-2">
                                               <span className="text-xs font-medium text-slate-900">
-                                                주문 #{order.id.slice(0, 8)}
+                                                주문 #{orderNumber}
                                               </span>
                                               {status && (
                                                 <span

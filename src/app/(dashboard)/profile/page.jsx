@@ -315,13 +315,15 @@ export default function ProfilePage() {
                     아직 주문 내역이 없습니다.
                   </p>
                 ) : (
-                  latestOrders.map((order) => (
-                    <article key={order.id} className="rounded-2xl border border-neutral-100 px-4 py-4 text-sm">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-slate-400">주문번호</p>
-                          <p className="font-semibold text-slate-900">{order.id}</p>
-                        </div>
+                  latestOrders.map((order) => {
+                    const orderNumber = order.orderCode || order.id;
+                    return (
+                      <article key={order.id} className="rounded-2xl border border-neutral-100 px-4 py-4 text-sm">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs text-slate-400">주문번호</p>
+                            <p className="font-semibold text-slate-900">{orderNumber}</p>
+                          </div>
                         <StatusBadge tone={order.statusTone}>{statusDisplay(order.statusCode)}</StatusBadge>
                       </div>
                       <p className="mt-2 text-xs text-slate-500">주문일 {order.orderedAt}</p>
@@ -329,8 +331,9 @@ export default function ProfilePage() {
                         <span>{order.items.length}개 품목</span>
                         <span>{currencyFormatter.format(order.totalAmount)}</span>
                       </div>
-                    </article>
-                  ))
+                      </article>
+                    );
+                  })
                 )}
               </div>
             </div>

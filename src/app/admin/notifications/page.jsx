@@ -97,7 +97,7 @@ export default function AdminNotificationsPage() {
                     </div>
                     <p className="mt-1 text-sm text-slate-600">{notification.message}</p>
                     <div className="mt-2 text-xs text-slate-400">
-                      주문 #{notification.orderId} · {formatDate(notification.createdAt)}
+                      주문 #{notification.orderCode || notification.orderId} · {formatDate(notification.createdAt)}
                     </div>
                   </div>
                   {!notification.read && (
@@ -118,5 +118,8 @@ export default function AdminNotificationsPage() {
     </div>
   );
 }
+
+
+
 
 

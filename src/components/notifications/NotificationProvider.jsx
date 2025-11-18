@@ -82,25 +82,29 @@ export function NotificationProvider({ children }) {
 
       if (eventType === "INSERT") {
         const statusLabel = getOrderStatusLabel(newRow.status);
+        const orderCode = newRow.order_code || newRow.id;
         const notification = buildNotificationPayload({
           type: "ORDER_CREATED",
           orderId: newRow.id,
+          orderCode,
           status: newRow.status,
           title: "새 주문 접수",
-          message: `주문 #${newRow.id}이(가) ${statusLabel} 상태로 접수되었습니다.`,
+          message: `주문 #${orderCode}이(가) ${statusLabel} 상태로 접수되었습니다.`,
           storeId: newRow.store_id,
           totalAmount: newRow.total_amount,
         });
         appendNotification(notification);
       } else if (eventType === "UPDATE" && newRow.status !== oldRow?.status) {
         const statusMeta = getOrderStatusMeta(newRow.status);
+        const orderCode = newRow.order_code || newRow.id;
         const notification = buildNotificationPayload({
           type: "ORDER_STATUS_CHANGED",
           orderId: newRow.id,
+          orderCode,
           status: newRow.status,
           previousStatus: oldRow?.status,
           title: "주문 상태 변경",
-          message: `주문 #${newRow.id} 상태가 ${statusMeta.label}(으)로 변경되었습니다.`,
+          message: `주문 #${orderCode} 상태가 ${statusMeta.label}(으)로 변경되었습니다.`,
           storeId: newRow.store_id,
           totalAmount: newRow.total_amount,
         });
@@ -173,5 +177,8 @@ export function useNotifications() {
   }
   return context;
 }
+
+
+
 
 

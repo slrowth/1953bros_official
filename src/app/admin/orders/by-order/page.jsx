@@ -77,12 +77,14 @@ export default function OrdersByOrderPage() {
     // 검색 필터 적용
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (order) =>
-          order.id.toLowerCase().includes(query) ||
+      filtered = filtered.filter((order) => {
+        const orderNumber = (order.orderCode || order.id || "").toLowerCase();
+        return (
+          orderNumber.includes(query) ||
           order.store.name.toLowerCase().includes(query) ||
           order.items.some((item) => item.name.toLowerCase().includes(query))
-      );
+        );
+      });
     }
 
     // 날짜 정렬 적용
@@ -272,6 +274,7 @@ export default function OrdersByOrderPage() {
           </div>
         ) : (
           filteredOrders.map((order) => {
+            const orderNumber = order.orderCode || order.id;
             const isExpanded = expandedOrders[order.id];
             const isEditing = editingOrder?.id === order.id;
             const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -293,7 +296,7 @@ export default function OrdersByOrderPage() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-slate-900">주문 #{order.id.slice(0, 8)}</span>
+                        <span className="text-sm font-semibold text-slate-900">주문 #{orderNumber}</span>
                         {getStatusBadge(order.statusCode)}
                         {getPaymentStatusBadge(order.paymentStatus)}
                       </div>

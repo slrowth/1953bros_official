@@ -124,6 +124,7 @@ export default function OrdersByProductPage() {
 
         const orderItem = {
           orderId: order.id,
+          orderCode: order.orderCode || order.id,
           orderDate: order.orderedAt,
           store: order.store,
           status: order.statusCode,
@@ -408,7 +409,7 @@ export default function OrdersByProductPage() {
                                         <div className="flex-1">
                                           <div className="flex items-center gap-2">
                                             <span className="text-xs font-medium text-slate-900">
-                                              주문 #{orderItem.orderId.slice(0, 8)}
+                                              주문 #{orderItem.orderCode || orderItem.orderId}
                                             </span>
                                             {status && (
                                               <span

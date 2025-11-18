@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS orders (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   franchise_id UUID NOT NULL REFERENCES franchises(id) ON DELETE RESTRICT,
   store_id UUID NOT NULL REFERENCES stores(id) ON DELETE RESTRICT,
+  order_code VARCHAR(20) UNIQUE,
   status VARCHAR(20) NOT NULL DEFAULT 'NEW' CHECK (status IN ('NEW', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED')),
   payment_status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (payment_status IN ('PENDING', 'PAID', 'FAILED', 'REFUNDED')),
   total_amount DECIMAL(12, 2) NOT NULL CHECK (total_amount >= 0),

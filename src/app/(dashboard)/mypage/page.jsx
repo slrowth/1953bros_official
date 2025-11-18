@@ -89,8 +89,8 @@ export default function MyPage() {
 
         if (search) {
           const keyword = search.trim().toLowerCase();
-          const orderIdString = String(order.id || "");
-          const matchOrderId = orderIdString.toLowerCase().includes(keyword);
+          const orderNumber = String(order.orderCode || order.id || "");
+          const matchOrderId = orderNumber.toLowerCase().includes(keyword);
           const matchProduct = (order.items || []).some((item) =>
             (item.name || "").toLowerCase().includes(keyword)
           );
@@ -276,7 +276,9 @@ export default function MyPage() {
                   >
                     <div>
                       <p className="text-xs font-medium text-slate-400">주문번호</p>
-                      <p className="text-lg font-semibold text-slate-900">{order.id}</p>
+                      <p className="text-lg font-semibold text-slate-900">
+                        {order.orderCode || order.id}
+                      </p>
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
                         <span className="inline-flex items-center gap-1">
                           <CalendarDays className="h-3.5 w-3.5" />

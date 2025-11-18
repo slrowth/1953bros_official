@@ -361,6 +361,7 @@ export default function NewOrdersPage() {
           </div>
         ) : (
           orders.map((order) => {
+            const orderNumber = order.orderCode || order.id;
             const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
             const isEditing = editingOrder?.id === order.id;
 
@@ -370,7 +371,7 @@ export default function NewOrdersPage() {
                   <div className="flex items-center gap-4">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-slate-900">주문 #{order.id.slice(0, 8)}</span>
+                        <span className="text-sm font-semibold text-slate-900">주문 #{orderNumber}</span>
                         <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
                           입금대기
                         </span>

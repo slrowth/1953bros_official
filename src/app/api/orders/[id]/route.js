@@ -79,6 +79,7 @@ export async function GET(request, { params }) {
     return NextResponse.json({
       order: {
         id: order.id,
+        orderCode: order.order_code,
         status: order.status,
         statusLabel: statusInfo.label,
         statusTone: statusInfo.tone,

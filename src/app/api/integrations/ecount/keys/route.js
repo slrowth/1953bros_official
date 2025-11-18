@@ -1,5 +1,3 @@
-"use server";
-
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/server/auth";
 import { NextResponse } from "next/server";
@@ -37,10 +35,22 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { label, zone, apiKey, sessionId } = body;
+    const { label, zone, apiKey, sessionId, comCode } = body;
 
     if (!label || !apiKey) {
       return NextResponse.json({ error: "라벨과 API KEY는 필수입니다." }, { status: 400 });
+    }
+
+    if (!comCode || comCode.trim() === "") {
+      return NextResponse.json({ error: "COM_CODE(회사 코드)는 필수입니다." }, { status: 400 });
+    }
+
+    if (!zone || zone.trim() === "") {
+      return NextResponse.json({ error: "ZONE은 필수입니다." }, { status: 400 });
+    }
+
+    if (!sessionId || sessionId.trim() === "") {
+      return NextResponse.json({ error: "USER_ID(사용자 ID)는 필수입니다." }, { status: 400 });
     }
 
     const supabase = await createClient();
@@ -52,6 +62,9 @@ export async function POST(request) {
         zone: zone || "",
         api_key: apiKey,
         session_id: sessionId || "",
+        config: {
+          com_code: comCode.trim(),
+        },
         created_by: user.id,
       })
       .select("id, label, zone, created_at")
@@ -64,7 +77,9 @@ export async function POST(request) {
     return NextResponse.json({ key: data }, { status: 201 });
   } catch (error) {
     console.error("Ecount key create error:", error);
-    return NextResponse.json({ error: "API 키 저장 중 오류가 발생했습니다." }, { status: 500 });
+    const errorMessage = error.message || "API 키 저장 중 오류가 발생했습니다.";
+    const statusCode = error.status || 500;
+    return NextResponse.json({ error: errorMessage }, { status: statusCode });
   }
 }
 
