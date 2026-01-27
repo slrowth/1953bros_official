@@ -13,11 +13,11 @@ import {
 } from "lucide-react";
 import { ORDER_STATUS_MAP } from "@/constants/orderStatus";
 import { calculateOrderGrossTotal } from "@/utils/orderPrice";
-
-const currencyFormatter = new Intl.NumberFormat("ko-KR", {
-  style: "currency",
-  currency: "KRW",
-});
+import { formatCurrency } from "@/utils/formatCurrency";
+import { useOrders } from "@/hooks/useOrders";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
+import ErrorMessage from "@/components/common/ErrorMessage";
+import OrderStatusBadge from "@/components/common/OrderStatusBadge";
 
 const timeframeOptions = [
   { value: "all", label: "전체" },
@@ -38,9 +38,6 @@ const statusOptions = [
 ];
 
 export default function MyPage() {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [timeframe, setTimeframe] = useState("3m");
   const [expandedOrder, setExpandedOrder] = useState(null);
@@ -48,30 +45,10 @@ export default function MyPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const fetchOrders = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const response = await fetch("/api/orders?limit=200");
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "주문 내역을 불러올 수 없습니다.");
-      }
-
-      setOrders(data.orders || []);
-    } catch (err) {
-      console.error("My page order fetch error:", err);
-      setError(err.message || "주문 내역을 불러오는 중 오류가 발생했습니다.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+  // useOrders 훅 사용
+  const { orders, loading, error, refetch: fetchOrders } = useOrders({
+    limit: 200,
+  });
 
   useEffect(() => {
     if (timeframe !== "custom") {
@@ -169,15 +146,8 @@ export default function MyPage() {
     setExpandedOrder((prev) => (prev === orderId ? null : orderId));
   };
 
-  if (loading) {
-    return (
-      <div className="flex flex-1 items-center justify-center bg-neutral-50">
-        <div className="flex flex-col items-center gap-3 text-sm text-slate-500">
-          <Loader2 className="h-8 w-8 animate-spin text-[#967d5a]" />
-          <p>주문 내역을 불러오는 중...</p>
-        </div>
-      </div>
-    );
+  if (loading && orders.length === 0) {
+    return <LoadingSpinner message="주문 내역을 불러오는 중..." />;
   }
 
   return (
@@ -191,15 +161,11 @@ export default function MyPage() {
           </p>
         </div>
 
-        {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-            {error}
-          </div>
-        )}
+        <ErrorMessage message={error} onRetry={fetchOrders} />
 
         <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           <SummaryCard title="총 주문" value={`${summary.total}건`} />
-          <SummaryCard title="총 주문 금액" value={currencyFormatter.format(summary.amount)} />
+          <SummaryCard title="총 주문 금액" value={formatCurrency(summary.amount)} />
           <SummaryCard title="입금대기" value={`${summary.NEW || 0}건`} tone="warning" />
           <SummaryCard title="배송완료" value={`${summary.DELIVERED || 0}건`} tone="success" />
           <SummaryCard title="주문확인" value={`${summary.PROCESSING || 0}건`} />
@@ -296,7 +262,7 @@ export default function MyPage() {
                       <div className="text-right">
                         <p className="text-xs text-slate-400">결제 예정 금액</p>
                         <p className="text-base font-semibold text-slate-900">
-                          {currencyFormatter.format(calculateOrderGrossTotal(order))}
+                          {formatCurrency(calculateOrderGrossTotal(order))}
                         </p>
                       </div>
                       <StatusPill statusCode={order.statusCode} statusTone={order.statusTone} />
@@ -330,7 +296,7 @@ export default function MyPage() {
                               <div className="text-right text-sm font-semibold text-slate-900">
                                 <p>수량 {item.quantity}</p>
                                 <p className="text-xs text-slate-500">
-                                  {currencyFormatter.format(item.unitPrice)} / EA
+                                  {formatCurrency(item.unitPrice)} / EA
                                 </p>
                               </div>
                             </li>
@@ -339,7 +305,7 @@ export default function MyPage() {
                         <div className="flex items-center justify-between border-t border-neutral-100 px-4 py-3 text-sm font-semibold">
                           <span>합계</span>
                           <span className="text-[#967d5a]">
-                            {currencyFormatter.format(calculateOrderGrossTotal(order))}
+                            {formatCurrency(calculateOrderGrossTotal(order))}
                           </span>
                         </div>
                       </div>

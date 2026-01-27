@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Search, ChevronDown, ChevronRight, Edit, Calendar, Package, Store, Filter, ArrowUpDown } from "lucide-react";
 import { calculateOrderGrossTotal } from "@/utils/orderPrice";
-
-const currencyFormatter = new Intl.NumberFormat("ko-KR", {
-  style: "currency",
-  currency: "KRW",
-});
+import { formatCurrency } from "@/utils/formatCurrency";
+import { useOrders } from "@/hooks/useOrders";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
+import ErrorMessage from "@/components/common/ErrorMessage";
+import OrderStatusBadge from "@/components/common/OrderStatusBadge";
 
 const STATUS_OPTIONS = [
   { value: "NEW", label: "입금대기", color: "bg-yellow-100 text-yellow-800" },
@@ -25,9 +25,6 @@ const PAYMENT_STATUS_OPTIONS = [
 ];
 
 export default function OrdersByOrderPage() {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("desc"); // "asc" | "desc"
@@ -40,37 +37,11 @@ export default function OrdersByOrderPage() {
   });
   const [updatingOrderId, setUpdatingOrderId] = useState(null);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [statusFilter]);
-
-  const fetchOrders = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const params = new URLSearchParams();
-      if (statusFilter !== "all") {
-        params.append("status", statusFilter);
-      }
-      params.append("limit", "100");
-
-      const response = await fetch(`/api/orders?${params.toString()}`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "주문 목록을 불러오는데 실패했습니다.");
-      }
-
-      setOrders(data.orders || []);
-    } catch (err) {
-      console.error("Fetch orders error:", err);
-      setError(err.message || "주문 목록을 불러오는 중 오류가 발생했습니다.");
-      setOrders([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // useOrders 훅 사용
+  const { orders, loading, error, refetch: fetchOrders } = useOrders({
+    status: statusFilter !== "all" ? statusFilter : undefined,
+    limit: 100,
+  });
 
   const filteredOrders = useMemo(() => {
     let filtered = orders;
@@ -176,16 +147,6 @@ export default function OrdersByOrderPage() {
     }
   };
 
-  const getStatusBadge = (statusCode) => {
-    const status = STATUS_OPTIONS.find((s) => s.value === statusCode);
-    return (
-      <span
-        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${status?.color || "bg-gray-100 text-gray-800"}`}
-      >
-        {status?.label || statusCode}
-      </span>
-    );
-  };
 
   const getPaymentStatusBadge = (paymentStatus) => {
     const status = PAYMENT_STATUS_OPTIONS.find((s) => s.value === paymentStatus);
@@ -199,14 +160,7 @@ export default function OrdersByOrderPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#967d5a] mx-auto"></div>
-          <p className="mt-4 text-sm text-slate-500">주문 목록을 불러오는 중...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="주문 목록을 불러오는 중..." />;
   }
 
   return (
@@ -259,11 +213,7 @@ export default function OrdersByOrderPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          {error}
-        </div>
-      )}
+      <ErrorMessage message={error} onRetry={fetchOrders} />
 
       {/* 주문 목록 */}
       <div className="space-y-4">
@@ -298,7 +248,7 @@ export default function OrdersByOrderPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-slate-900">주문 #{orderNumber}</span>
-                        {getStatusBadge(order.statusCode)}
+                        <OrderStatusBadge status={order.statusCode} />
                         {getPaymentStatusBadge(order.paymentStatus)}
                       </div>
                       <div className="mt-1 flex items-center gap-4 text-xs text-slate-500">
@@ -323,7 +273,7 @@ export default function OrdersByOrderPage() {
                     <div className="text-right">
                       <p className="text-xs text-slate-500">제품 {order.items.length}종 · 수량 {totalQuantity}</p>
                       <p className="mt-1 text-lg font-semibold text-slate-900">
-                        {currencyFormatter.format(calculateOrderGrossTotal(order))}
+                        {formatCurrency(calculateOrderGrossTotal(order))}
                       </p>
                     </div>
                     {!isEditing && (
@@ -422,10 +372,10 @@ export default function OrdersByOrderPage() {
                           </div>
                           <div className="text-right">
                             <p className="text-sm text-slate-700">
-                              {item.quantity}개 × {currencyFormatter.format(item.unitPrice)}
+                              {item.quantity}개 × {formatCurrency(item.unitPrice)}
                             </p>
                             <p className="mt-1 text-sm font-semibold text-slate-900">
-                              {currencyFormatter.format(item.quantity * item.unitPrice)}
+                              {formatCurrency(item.quantity * item.unitPrice)}
                             </p>
                           </div>
                         </div>
@@ -436,7 +386,7 @@ export default function OrdersByOrderPage() {
                       <div className="text-right">
                         <p className="text-sm text-slate-500">총 주문 금액</p>
                         <p className="mt-1 text-xl font-semibold text-slate-900">
-                          {currencyFormatter.format(calculateOrderGrossTotal(order))}
+                          {formatCurrency(calculateOrderGrossTotal(order))}
                         </p>
                       </div>
                     </div>

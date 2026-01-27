@@ -9,11 +9,13 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 정적 파일과 API 라우트는 미들웨어를 건너뜀
+  // 모바일 로그인 페이지는 인증 체크 제외
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
     pathname.startsWith("/favicon.ico") ||
     pathname.startsWith("/logo.svg") ||
+    pathname.startsWith("/m/login") ||
     pathname.match(/\.(ico|png|jpg|jpeg|svg|gif|webp|woff|woff2|ttf|eot)$/)
   ) {
     return response;
@@ -22,8 +24,9 @@ export async function middleware(request: NextRequest) {
   // 인증이 필요한 라우트 체크
   const isDashboardRoute = pathname.startsWith("/dashboard") || pathname.startsWith("/products") || pathname.startsWith("/training") || pathname.startsWith("/notices") || pathname.startsWith("/quality");
   const isAdminRoute = pathname.startsWith("/admin");
+  const isMobileRoute = pathname.startsWith("/m");
 
-  if (isDashboardRoute || isAdminRoute) {
+  if (isDashboardRoute || isAdminRoute || isMobileRoute) {
     // Supabase 클라이언트를 생성하여 사용자 정보 확인
     const { createServerClient } = await import("@supabase/ssr");
     const supabase = createServerClient(
@@ -50,6 +53,12 @@ export async function middleware(request: NextRequest) {
 
     // 인증되지 않은 사용자는 로그인 페이지로 리다이렉트
     if (!user || error) {
+      // 모바일 라우트는 모바일 로그인 페이지로
+      if (isMobileRoute) {
+        const redirectUrl = new URL("/m/login", request.url);
+        redirectUrl.searchParams.set("redirect", pathname);
+        return NextResponse.redirect(redirectUrl);
+      }
       const redirectUrl = new URL("/login", request.url);
       redirectUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(redirectUrl);
@@ -64,8 +73,10 @@ export async function middleware(request: NextRequest) {
 
     if (userError || !userData) {
       // 사용자 정보를 찾을 수 없으면 로그인 페이지로 리다이렉트
-      const redirectUrl = new URL("/login", request.url);
-      return NextResponse.redirect(redirectUrl);
+      if (isMobileRoute) {
+        return NextResponse.redirect(new URL("/m/login", request.url));
+      }
+      return NextResponse.redirect(new URL("/login", request.url));
     }
 
     // PENDING 상태인 사용자는 대기 페이지로 리다이렉트
@@ -85,6 +96,13 @@ export async function middleware(request: NextRequest) {
     if (isDashboardRoute) {
       if (userData.role !== "OWNER" && userData.role !== "STAFF") {
         return NextResponse.redirect(new URL("/login?error=unauthorized", request.url));
+      }
+    }
+
+    // Mobile 라우트: OWNER 또는 STAFF만 접근 가능
+    if (isMobileRoute) {
+      if (userData.role !== "OWNER" && userData.role !== "STAFF") {
+        return NextResponse.redirect(new URL("/m/login?error=unauthorized", request.url));
       }
     }
 

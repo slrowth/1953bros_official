@@ -17,60 +17,33 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
+import { useQualityRecords } from "@/hooks/useQualityRecords";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
+import ErrorMessage from "@/components/common/ErrorMessage";
 
 export default function QualityPage() {
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedStoreId, setSelectedStoreId] = useState("all");
-  const [records, setRecords] = useState([]);
   const [checklists, setChecklists] = useState([]);
   const [stores, setStores] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // useQualityRecords 훅 사용
+  const { records, loading, error, refetch: fetchRecords } = useQualityRecords({
+    date: selectedDate || undefined,
+    storeId: selectedStoreId !== "all" ? selectedStoreId : undefined,
+  });
 
   useEffect(() => {
     fetchChecklists();
     fetchStores();
-    fetchRecords();
   }, []);
 
   useEffect(() => {
     fetchRecords();
-  }, [selectedDate, selectedStoreId]);
-
-  const fetchRecords = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const params = new URLSearchParams();
-      // 날짜가 선택된 경우에만 필터 적용
-      if (selectedDate) {
-        params.append("date", selectedDate);
-      }
-      if (selectedStoreId !== "all") {
-        params.append("storeId", selectedStoreId);
-      }
-
-      const response = await fetch(`/api/quality/records?${params.toString()}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "점검 기록을 불러오는데 실패했습니다." }));
-        throw new Error(errorData.error || "점검 기록을 불러오는데 실패했습니다.");
-      }
-
-      const data = await response.json();
-      setRecords(data.records || []);
-    } catch (err) {
-      console.error("Fetch records error:", err);
-      setError(err.message || "점검 기록을 불러오는 중 오류가 발생했습니다.");
-      setRecords([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [selectedDate, selectedStoreId, fetchRecords]);
 
   const fetchChecklists = async () => {
     try {
@@ -366,14 +339,7 @@ export default function QualityPage() {
   }, [selectedStoreId, records, stores]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#967d5a] mx-auto"></div>
-          <p className="mt-4 text-sm text-slate-500">점검 기록을 불러오는 중...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="점검 기록을 불러오는 중..." />;
   }
 
   return (
@@ -686,7 +652,7 @@ export default function QualityPage() {
           )}
 
           {error && (
-            <div className="rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</div>
+            <ErrorMessage message={error} onRetry={fetchRecords} />
           )}
 
           {/* 점검 기록 목록 */}
