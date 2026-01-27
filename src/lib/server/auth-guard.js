@@ -57,15 +57,11 @@ export async function authGuard(options = {}) {
  * OWNER 또는 STAFF만 접근 가능
  */
 export async function dashboardAuthGuard() {
-  const { headers } = await import("next/headers");
-  const headersList = await headers();
-  const currentPath = headersList.get("x-pathname") || "/";
-  
   return authGuard({
     allowedRoles: ["OWNER", "STAFF"],
     redirectPath: "/login",
     requireApproved: true,
-    currentPath,
+    currentPath: "/",
   });
 }
 
@@ -74,15 +70,11 @@ export async function dashboardAuthGuard() {
  * ADMIN만 접근 가능
  */
 export async function adminAuthGuard() {
-  const { headers } = await import("next/headers");
-  const headersList = await headers();
-  const currentPath = headersList.get("x-pathname") || "/";
-  
   return authGuard({
     allowedRoles: ["ADMIN"],
     redirectPath: "/login",
     requireApproved: true,
-    currentPath,
+    currentPath: "/",
   });
 }
 
@@ -91,14 +83,10 @@ export async function adminAuthGuard() {
  * OWNER 또는 STAFF만 접근 가능
  */
 export async function mobileAuthGuard() {
-  const { headers } = await import("next/headers");
-  const headersList = await headers();
-  const currentPath = headersList.get("x-pathname") || "/";
-  
   return authGuard({
     allowedRoles: ["OWNER", "STAFF"],
     redirectPath: "/m/login",
     requireApproved: true,
-    currentPath,
+    currentPath: "/",
   });
 }
