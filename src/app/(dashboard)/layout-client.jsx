@@ -1,17 +1,44 @@
-/**
- * Dashboard 레이아웃 (서버 컴포넌트)
- * 인증 및 권한 체크를 수행합니다
- */
+"use client";
 
-import { dashboardAuthGuard } from "@/lib/server/auth-guard";
-import DashboardLayoutClient from "./layout-client";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import {
+  Bell,
+  BookOpen,
+  ClipboardList,
+  Home,
+  Package,
+  ShieldCheck,
+  ShoppingCart,
+} from "lucide-react";
+import UserProfileDropdown from "@/components/common/UserProfileDropdown";
 
-export default async function DashboardLayout({ children }) {
-  // 인증 및 권한 체크
-  await dashboardAuthGuard();
+const navItems = [
+  {
+    name: "주문 관리",
+    href: "/products",
+    icon: ShoppingCart,
+  },
+  {
+    name: "공지사항",
+    href: "/notices",
+    icon: ClipboardList,
+  },
+  {
+    name: "품질 점검",
+    href: "/quality",
+    icon: ShieldCheck,
+  },
+  {
+    name: "교육 자료",
+    href: "/training",
+    icon: BookOpen,
+  },
+];
 
-  return <DashboardLayoutClient>{children}</DashboardLayoutClient>;
-}
+export default function DashboardLayoutClient({ children }) {
   const pathname = usePathname();
   const [storeName, setStoreName] = useState("지점 정보를 불러오는 중...");
   const [loading, setLoading] = useState(true);
@@ -131,4 +158,3 @@ export default async function DashboardLayout({ children }) {
     </div>
   );
 }
-
