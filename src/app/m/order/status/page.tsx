@@ -80,7 +80,7 @@ export default function MobileOrderStatusPage() {
     return [...orders].sort((a, b) => {
       const dateA = new Date(a.orderedAt);
       const dateB = new Date(b.orderedAt);
-      return dateB - dateA;
+      return dateB.getTime() - dateA.getTime();
     });
   }, [orders]);
 

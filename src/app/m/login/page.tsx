@@ -223,6 +223,8 @@ export default function MobileLoginPage() {
               {/* 로그인 버튼 */}
               <Button
                 type="submit"
+                variant="default"
+                size="lg"
                 className="w-full bg-[#967d5a] hover:bg-[#7a6548] text-white h-12 text-base font-semibold"
                 disabled={isLoading}
               >

@@ -54,7 +54,7 @@ export default function MobileNoticesPage() {
     if (!a.isRead && b.isRead) return -1;
     if (a.isRead && !b.isRead) return 1;
     // 나머지는 날짜순 (최신순)
-    return new Date(b.published_at) - new Date(a.published_at);
+    return new Date(b.published_at).getTime() - new Date(a.published_at).getTime();
   });
 
   return (

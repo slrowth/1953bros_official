@@ -19,8 +19,8 @@ export default function MobileOrderPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [quantities, setQuantities] = useState({});
-  const [cart, setCart] = useState({});
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [cart, setCart] = useState<Record<string, number>>({});
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [showCart, setShowCart] = useState(false);
 
@@ -83,11 +83,12 @@ export default function MobileOrderPage() {
       .map(([productId, quantity]) => {
         const product = products.find((item) => item.id === productId);
         if (!product) return null;
+        const qty = Number(quantity) || 0;
         return {
           id: productId,
           name: product.name,
-          quantity,
-          amount: product.price * quantity,
+          quantity: qty,
+          amount: product.price * qty,
           unitPrice: product.price,
         };
       })
@@ -97,7 +98,7 @@ export default function MobileOrderPage() {
   const cartTotal = cartList.reduce((sum, item) => sum + item.amount, 0);
   const cartTotalQuantity = cartList.reduce((sum, item) => sum + item.quantity, 0);
 
-  const handleQuantityChange = (productId, delta) => {
+  const handleQuantityChange = (productId: string, delta: number) => {
     setQuantities((prev) => {
       const current = prev[productId] || 0;
       const next = Math.max(0, current + delta);
@@ -108,7 +109,7 @@ export default function MobileOrderPage() {
     });
   };
 
-  const handleAddToCart = (productId) => {
+  const handleAddToCart = (productId: string) => {
     setCart((prev) => {
       const selectedQty = quantities[productId] ?? 0;
       const quantity = Math.max(1, selectedQty);
@@ -123,7 +124,7 @@ export default function MobileOrderPage() {
     }));
   };
 
-  const handleUpdateCartQuantity = (productId, delta) => {
+  const handleUpdateCartQuantity = (productId: string, delta: number) => {
     setCart((prev) => {
       const current = prev[productId] || 0;
       const next = Math.max(0, current + delta);
