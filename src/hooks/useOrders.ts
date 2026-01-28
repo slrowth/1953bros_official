@@ -94,12 +94,14 @@ export function useOrders(filters: OrderFilters = {}): UseOrdersReturn {
   }, [filters.status, filters.storeId, filters.franchiseId, filters.limit]);
 
   useEffect(() => {
-    if (filters.enabled !== false) {
-      fetchOrders();
-    } else {
-      // enabled가 false면 로딩 상태를 false로 설정
+    // enabled가 명시적으로 false면 API 호출하지 않음
+    if (filters.enabled === false) {
       setLoading(false);
+      return;
     }
+
+    // enabled가 true이거나 undefined일 때만 API 호출
+    fetchOrders();
   }, [fetchOrders, filters.enabled]);
 
   return { orders, loading, error, refetch: fetchOrders };
