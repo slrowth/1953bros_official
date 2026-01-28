@@ -26,17 +26,19 @@ export default function MobileHomePage() {
   const [noticesLoading, setNoticesLoading] = useState(true);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  // 오늘 주문 조회
+  // 오늘 주문 조회 (인증 체크 완료 후에만 실행)
   const { orders: todayOrders, loading: ordersLoading, error: ordersError } = useOrders({
     limit: 10,
+    enabled: !checkingAuth,
   });
 
-  // 오늘 품질점검 기록 조회
+  // 오늘 품질점검 기록 조회 (인증 체크 완료 후에만 실행)
   const { records: todayRecords, loading: recordsLoading, error: recordsError } = useQualityRecords({
     date: today,
+    enabled: !checkingAuth,
   });
 
-  // 인증 체크 (클라이언트 사이드)
+  // 인증 체크 (클라이언트 사이드) - 즉시 실행
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -49,7 +51,7 @@ export default function MobileHomePage() {
           // 인증되지 않은 경우 로그인 페이지로 리다이렉트
           const currentPath = window.location.pathname;
           const redirectPath = currentPath !== "/m" ? currentPath : "";
-          router.push(`/m/login${redirectPath ? `?redirect=${encodeURIComponent(redirectPath)}` : ""}`);
+          router.replace(`/m/login${redirectPath ? `?redirect=${encodeURIComponent(redirectPath)}` : ""}`);
           return;
         }
 
@@ -62,24 +64,26 @@ export default function MobileHomePage() {
 
         if (!userData || (userData.role !== "OWNER" && userData.role !== "STAFF")) {
           // 권한이 없는 경우 로그인 페이지로
-          router.push("/m/login?error=unauthorized");
+          router.replace("/m/login?error=unauthorized");
           return;
         }
 
         if (userData.status !== "APPROVED") {
           // 승인되지 않은 경우
-          router.push("/m/login?error=pending");
+          router.replace("/m/login?error=pending");
           return;
         }
+
+        // 인증 성공
+        setCheckingAuth(false);
       } catch (error) {
         console.error("Auth check error:", error);
         // 에러 발생 시에도 로그인 페이지로
-        router.push("/m/login");
-      } finally {
-        setCheckingAuth(false);
+        router.replace("/m/login");
       }
     };
 
+    // 즉시 실행
     checkAuth();
   }, [router]);
 

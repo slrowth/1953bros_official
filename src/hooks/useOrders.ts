@@ -23,6 +23,11 @@ interface OrderFilters {
    * @default 50
    */
   limit?: number;
+  /**
+   * API 호출 활성화 여부
+   * @default true
+   */
+  enabled?: boolean;
 }
 
 interface UseOrdersReturn {
@@ -51,7 +56,7 @@ interface UseOrdersReturn {
  */
 export function useOrders(filters: OrderFilters = {}): UseOrdersReturn {
   const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(filters.enabled !== false);
   const [error, setError] = useState("");
 
   const fetchOrders = useCallback(async () => {
@@ -89,8 +94,13 @@ export function useOrders(filters: OrderFilters = {}): UseOrdersReturn {
   }, [filters.status, filters.storeId, filters.franchiseId, filters.limit]);
 
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    if (filters.enabled !== false) {
+      fetchOrders();
+    } else {
+      // enabled가 false면 로딩 상태를 false로 설정
+      setLoading(false);
+    }
+  }, [fetchOrders, filters.enabled]);
 
   return { orders, loading, error, refetch: fetchOrders };
 }

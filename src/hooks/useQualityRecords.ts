@@ -18,6 +18,11 @@ interface QualityRecordFilters {
    * 체크리스트 ID 필터
    */
   checklistId?: string;
+  /**
+   * API 호출 활성화 여부
+   * @default true
+   */
+  enabled?: boolean;
 }
 
 interface UseQualityRecordsReturn {
@@ -46,7 +51,7 @@ interface UseQualityRecordsReturn {
  */
 export function useQualityRecords(filters: QualityRecordFilters = {}): UseQualityRecordsReturn {
   const [records, setRecords] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(filters.enabled !== false);
   const [error, setError] = useState("");
 
   const fetchRecords = useCallback(async () => {
@@ -86,8 +91,13 @@ export function useQualityRecords(filters: QualityRecordFilters = {}): UseQualit
   }, [filters.date, filters.storeId, filters.checklistId]);
 
   useEffect(() => {
-    fetchRecords();
-  }, [fetchRecords]);
+    if (filters.enabled !== false) {
+      fetchRecords();
+    } else {
+      // enabled가 false면 로딩 상태를 false로 설정
+      setLoading(false);
+    }
+  }, [fetchRecords, filters.enabled]);
 
   return { records, loading, error, refetch: fetchRecords };
 }
