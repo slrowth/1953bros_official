@@ -96,9 +96,9 @@ export function useQualityRecords(filters: QualityRecordFilters = {}): UseQualit
       setLoading(false);
       return;
     }
-    fetchOrders();
+    fetchRecords(); // ✅ 정의된 함수 이름인 fetchRecords로 수정
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.enabled]);
+  }, [filters.enabled, fetchRecords]); // fetchRecords도 의존성에 추가하는 것이 좋습니다.
 
   return { records, loading, error, refetch: fetchRecords };
 }
