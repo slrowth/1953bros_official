@@ -101,11 +101,8 @@ export function useOrders(filters: OrderFilters = {}): UseOrdersReturn {
     }
 
     // enabled가 true이거나 undefined일 때만 API 호출
-    if (filters.enabled !== false) {
-      fetchOrders();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.enabled, filters.status, filters.storeId, filters.franchiseId, filters.limit]);
+    fetchOrders();
+  }, [fetchOrders, filters.enabled]);
 
   return { orders, loading, error, refetch: fetchOrders };
 }
