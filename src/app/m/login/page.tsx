@@ -56,9 +56,10 @@ export default function MobileLoginPage() {
 
         if (userData) {
           setUserRole(userData.role);
-          // 이미 로그인된 경우 모바일 메인으로 리다이렉트
+          // 이미 로그인된 경우 원래 가려던 페이지 또는 모바일 메인으로 리다이렉트
           if (userData.role === "OWNER" || userData.role === "STAFF") {
-            router.push("/m");
+            const redirectPath = searchParams.get("redirect") || "/m";
+            router.push(redirectPath);
           }
         }
       }
@@ -116,14 +117,16 @@ export default function MobileLoginPage() {
         return;
       }
 
-      // 모바일 사용자는 모바일 메인으로 리다이렉트
+      // 원래 가려던 페이지 또는 모바일 메인으로 리다이렉트
+      const redirectPath = searchParams.get("redirect") || "/m";
+      
       if (data.user?.role === "OWNER" || data.user?.role === "STAFF") {
-        router.push("/m");
+        router.push(redirectPath);
       } else if (data.user?.role === "ADMIN") {
         // 관리자는 데스크톱 관리자 페이지로
         router.push("/admin");
       } else {
-        router.push("/m");
+        router.push(redirectPath);
       }
       router.refresh();
     } catch (error) {
