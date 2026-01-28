@@ -94,15 +94,14 @@ export function useOrders(filters: OrderFilters = {}): UseOrdersReturn {
   }, [filters.status, filters.storeId, filters.franchiseId, filters.limit]);
 
   useEffect(() => {
-    // enabled가 명시적으로 false면 API 호출하지 않음
-    if (filters.enabled === false) {
+    const isEnabled = filters.enabled ?? true;
+    if (!isEnabled) {
       setLoading(false);
       return;
     }
-
-    // enabled가 true이거나 undefined일 때만 API 호출
     fetchOrders();
-  }, [fetchOrders, filters.enabled]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.enabled]);
 
   return { orders, loading, error, refetch: fetchOrders };
 }

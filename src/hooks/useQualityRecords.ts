@@ -71,10 +71,10 @@ export function useQualityRecords(filters: QualityRecordFilters = {}): UseQualit
       }
 
       const response = await fetch(`/api/quality/records?${params.toString()}`);
-      
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ 
-          error: "점검 기록을 불러오는데 실패했습니다." 
+        const errorData = await response.json().catch(() => ({
+          error: "점검 기록을 불러오는데 실패했습니다."
         }));
         throw new Error(errorData.error || "점검 기록을 불러오는데 실패했습니다.");
       }
@@ -91,15 +91,14 @@ export function useQualityRecords(filters: QualityRecordFilters = {}): UseQualit
   }, [filters.date, filters.storeId, filters.checklistId]);
 
   useEffect(() => {
-    // enabled가 명시적으로 false면 API 호출하지 않음
-    if (filters.enabled === false) {
+    const isEnabled = filters.enabled ?? true;
+    if (!isEnabled) {
       setLoading(false);
       return;
     }
-
-    // enabled가 true이거나 undefined일 때만 API 호출
-    fetchRecords();
-  }, [fetchRecords, filters.enabled]);
+    fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.enabled]);
 
   return { records, loading, error, refetch: fetchRecords };
 }
