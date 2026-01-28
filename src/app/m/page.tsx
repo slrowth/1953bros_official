@@ -39,82 +39,12 @@ export default function MobileHomePage() {
     enabled: isAuthenticated && !checkingAuth,
   });
 
-  // 인증 체크 (클라이언트 사이드) - 최우선 실행
+  // 서버 사이드에서 이미 인증 체크를 했으므로, 클라이언트에서는 간단히 상태만 설정
   useEffect(() => {
-    let isMounted = true;
-
-    const checkAuth = async () => {
-      try {
-        // 환경 변수 확인
-        if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-          console.error("Supabase 환경 변수가 설정되지 않았습니다.");
-          if (isMounted) {
-            router.replace("/m/login?error=config");
-          }
-          return;
-        }
-
-        const supabase = createClient();
-        const {
-          data: { user: authUser },
-          error: authError,
-        } = await supabase.auth.getUser();
-
-        // 컴포넌트가 언마운트되었으면 중단
-        if (!isMounted) return;
-
-        if (authError || !authUser) {
-          // 인증되지 않은 경우 즉시 로그인 페이지로 리다이렉트
-          const currentPath = window.location.pathname;
-          const redirectPath = currentPath !== "/m" ? currentPath : "";
-          router.replace(`/m/login${redirectPath ? `?redirect=${encodeURIComponent(redirectPath)}` : ""}`);
-          return;
-        }
-
-        // 사용자 정보 확인
-        const { data: userData, error: userError } = await supabase
-          .from("users")
-          .select("role, status")
-          .eq("id", authUser.id)
-          .single();
-
-        // 컴포넌트가 언마운트되었으면 중단
-        if (!isMounted) return;
-
-        if (userError || !userData || (userData.role !== "OWNER" && userData.role !== "STAFF")) {
-          // 권한이 없는 경우 로그인 페이지로
-          router.replace("/m/login?error=unauthorized");
-          return;
-        }
-
-        if (userData.status !== "APPROVED") {
-          // 승인되지 않은 경우
-          router.replace("/m/login?error=pending");
-          return;
-        }
-
-        // 인증 성공 - 마지막에 상태 업데이트
-        if (isMounted) {
-          setIsAuthenticated(true);
-          setCheckingAuth(false);
-        }
-      } catch (error) {
-        console.error("Auth check error:", error);
-        // 에러 발생 시에도 로그인 페이지로
-        if (isMounted) {
-          router.replace("/m/login");
-        }
-      }
-    };
-
-    // 즉시 실행 (동기적으로)
-    checkAuth();
-
-    // cleanup 함수
-    return () => {
-      isMounted = false;
-    };
-  }, [router]);
+    // 서버 사이드 인증이 성공했으므로 바로 API 호출 허용
+    setIsAuthenticated(true);
+    setCheckingAuth(false);
+  }, []);
 
   // 공지사항 조회
   useEffect(() => {
