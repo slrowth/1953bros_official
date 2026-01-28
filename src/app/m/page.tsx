@@ -26,6 +26,7 @@ export default function MobileHomePage() {
   const [noticesLoading, setNoticesLoading] = useState(true);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // 오늘 주문 조회 (인증 체크 완료 후에만 실행)
   const { orders: todayOrders, loading: ordersLoading, error: ordersError } = useOrders({
@@ -39,12 +40,75 @@ export default function MobileHomePage() {
     enabled: isAuthenticated && !checkingAuth,
   });
 
-  // 서버 사이드에서 이미 인증 체크를 했으므로, 클라이언트에서는 간단히 상태만 설정
+  // 클라이언트 사이드 인증 체크 (서버 사이드 체크를 보완)
   useEffect(() => {
-    // 서버 사이드 인증이 성공했으므로 바로 API 호출 허용
-    setIsAuthenticated(true);
-    setCheckingAuth(false);
-  }, []);
+    let isMounted = true;
+
+    const checkAuth = async () => {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user: authUser },
+          error: authError,
+        } = await supabase.auth.getUser();
+
+        if (!isMounted) return;
+
+        if (authError || !authUser) {
+          // 인증되지 않은 경우 - 에러 상태로 설정하고 로그인 버튼 표시
+          if (isMounted) {
+            setAuthError("인증이 필요합니다. 로그인 후 이용해주세요.");
+            setCheckingAuth(false);
+          }
+          return;
+        }
+
+        // 사용자 정보 확인
+        const { data: userData, error: userError } = await supabase
+          .from("users")
+          .select("role, status")
+          .eq("id", authUser.id)
+          .single();
+
+        if (!isMounted) return;
+
+        if (userError || !userData || (userData.role !== "OWNER" && userData.role !== "STAFF")) {
+          if (isMounted) {
+            setAuthError("접근 권한이 없습니다.");
+            setCheckingAuth(false);
+          }
+          return;
+        }
+
+        if (userData.status !== "APPROVED") {
+          if (isMounted) {
+            setAuthError("계정 승인 대기 중입니다. 관리자에게 문의하세요.");
+            setCheckingAuth(false);
+          }
+          return;
+        }
+
+        // 인증 성공
+        if (isMounted) {
+          setIsAuthenticated(true);
+          setCheckingAuth(false);
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+        if (isMounted) {
+          setAuthError("인증 확인 중 오류가 발생했습니다.");
+          setCheckingAuth(false);
+        }
+      }
+    };
+
+    // 즉시 실행
+    checkAuth();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [router]);
 
   // 공지사항 조회
   useEffect(() => {
@@ -108,6 +172,69 @@ export default function MobileHomePage() {
       <MobileLayout title="홈" showBackButton={false}>
         <div className="flex items-center justify-center min-h-[60vh]">
           <LoadingSpinner message="로딩 중..." size={8} fullHeight={false} />
+        </div>
+      </MobileLayout>
+    );
+  }
+
+  // 인증 에러가 있으면 에러 메시지와 로그인 버튼 표시
+  if (authError) {
+    return (
+      <MobileLayout title="홈" showBackButton={false}>
+        <div className="flex items-center justify-center min-h-[60vh] px-4">
+          <div className="w-full max-w-md">
+            <ErrorMessage 
+              message={authError} 
+              isAuthError={true}
+              onRetry={() => {
+                setCheckingAuth(true);
+                setAuthError(null);
+                // 인증 체크 다시 실행
+                const checkAuth = async () => {
+                  try {
+                    const supabase = createClient();
+                    const {
+                      data: { user: authUser },
+                      error: authErr,
+                    } = await supabase.auth.getUser();
+
+                    if (authErr || !authUser) {
+                      setAuthError("인증이 필요합니다. 로그인 후 이용해주세요.");
+                      setCheckingAuth(false);
+                      return;
+                    }
+
+                    const { data: userData, error: userErr } = await supabase
+                      .from("users")
+                      .select("role, status")
+                      .eq("id", authUser.id)
+                      .single();
+
+                    if (userErr || !userData || (userData.role !== "OWNER" && userData.role !== "STAFF")) {
+                      setAuthError("접근 권한이 없습니다.");
+                      setCheckingAuth(false);
+                      return;
+                    }
+
+                    if (userData.status !== "APPROVED") {
+                      setAuthError("계정 승인 대기 중입니다. 관리자에게 문의하세요.");
+                      setCheckingAuth(false);
+                      return;
+                    }
+
+                    setIsAuthenticated(true);
+                    setCheckingAuth(false);
+                    setAuthError(null);
+                  } catch (err) {
+                    console.error("Auth check error:", err);
+                    setAuthError("인증 확인 중 오류가 발생했습니다.");
+                    setCheckingAuth(false);
+                  }
+                };
+                checkAuth();
+              }}
+            />
+          </div>
         </div>
       </MobileLayout>
     );

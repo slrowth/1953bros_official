@@ -98,8 +98,11 @@ export function useQualityRecords(filters: QualityRecordFilters = {}): UseQualit
     }
 
     // enabled가 true이거나 undefined일 때만 API 호출
-    fetchRecords();
-  }, [fetchRecords, filters.enabled]);
+    if (filters.enabled !== false) {
+      fetchRecords();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.enabled, filters.date, filters.storeId, filters.checklistId]);
 
   return { records, loading, error, refetch: fetchRecords };
 }
