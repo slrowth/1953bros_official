@@ -67,13 +67,8 @@ export async function middleware(request: NextRequest) {
 // 미들웨어가 작동할 경로 설정
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - api (API routes)
-     */
-    "/((?!_next/static|_next/image|favicon.ico|api).*)",
+    // 모바일 경로만 명시적으로 지정
+    // /m 또는 /m/로 시작하는 모든 경로 (정규식 패턴)
+    "^/m(/.*)?$",
   ],
 };

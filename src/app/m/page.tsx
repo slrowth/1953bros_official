@@ -6,7 +6,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ShoppingCart, ClipboardList, CheckSquare, Package, ArrowRight, Bell } from "lucide-react";
 import MobileLayout from "@/components/mobile/MobileLayout";
 import { useOrders } from "@/hooks/useOrders";
@@ -16,12 +16,15 @@ import ErrorMessage from "@/components/common/ErrorMessage";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDate } from "@/utils/formatDate";
 import OrderStatusBadge from "@/components/common/OrderStatusBadge";
+import { createClient } from "@/lib/supabase/client";
 
 export default function MobileHomePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [today] = useState(() => formatDate(new Date()));
   const [notices, setNotices] = useState([]);
   const [noticesLoading, setNoticesLoading] = useState(true);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   // 오늘 주문 조회
   const { orders: todayOrders, loading: ordersLoading, error: ordersError } = useOrders({
@@ -33,8 +36,57 @@ export default function MobileHomePage() {
     date: today,
   });
 
+  // 인증 체크 (클라이언트 사이드)
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser();
+
+        if (!authUser) {
+          // 인증되지 않은 경우 로그인 페이지로 리다이렉트
+          const currentPath = window.location.pathname;
+          const redirectPath = currentPath !== "/m" ? currentPath : "";
+          router.push(`/m/login${redirectPath ? `?redirect=${encodeURIComponent(redirectPath)}` : ""}`);
+          return;
+        }
+
+        // 사용자 정보 확인
+        const { data: userData } = await supabase
+          .from("users")
+          .select("role, status")
+          .eq("id", authUser.id)
+          .single();
+
+        if (!userData || (userData.role !== "OWNER" && userData.role !== "STAFF")) {
+          // 권한이 없는 경우 로그인 페이지로
+          router.push("/m/login?error=unauthorized");
+          return;
+        }
+
+        if (userData.status !== "APPROVED") {
+          // 승인되지 않은 경우
+          router.push("/m/login?error=pending");
+          return;
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+        // 에러 발생 시에도 로그인 페이지로
+        router.push("/m/login");
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
   // 공지사항 조회
   useEffect(() => {
+    if (checkingAuth) return; // 인증 체크 완료 후에만 실행
+
     const fetchNotices = async () => {
       try {
         setNoticesLoading(true);
@@ -52,7 +104,7 @@ export default function MobileHomePage() {
     };
 
     fetchNotices();
-  }, []);
+  }, [checkingAuth]);
 
   // 오늘 주문 통계
   const todayStats = useMemo(() => {
@@ -85,7 +137,18 @@ export default function MobileHomePage() {
     return notices.filter((notice) => !notice.isRead).length;
   }, [notices]);
 
-  const isLoading = ordersLoading || recordsLoading;
+  const isLoading = ordersLoading || recordsLoading || checkingAuth;
+
+  // 인증 체크 중이면 로딩 표시
+  if (checkingAuth) {
+    return (
+      <MobileLayout title="홈" showBackButton={false}>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <LoadingSpinner message="로딩 중..." size={8} fullHeight={false} />
+        </div>
+      </MobileLayout>
+    );
+  }
 
   return (
     <MobileLayout title="홈" showBackButton={false}>
