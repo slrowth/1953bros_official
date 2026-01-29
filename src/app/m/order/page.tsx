@@ -238,6 +238,11 @@ export default function MobileOrderPage() {
             {filteredProducts.map((product) => {
               const quantity = quantities[product.id] || 0;
               const cartQuantity = cart[product.id] || 0;
+              // 상품별 담기 버튼에 표시할 텍스트/접근성 라벨을 계산합니다.
+              // - 모바일 화면이 좁아도 글자가 깨지지 않도록, 담긴 수량은 숫자만 표시합니다.
+              const cart_button_label = cartQuantity > 0 ? String(cartQuantity) : "담기";
+              const cart_button_aria_label =
+                cartQuantity > 0 ? `장바구니에 ${cartQuantity}개 담김` : "장바구니에 담기";
 
               return (
                 <div
@@ -291,9 +296,10 @@ export default function MobileOrderPage() {
 
                         <button
                           onClick={() => handleAddToCart(product.id)}
-                          className="flex-1 rounded-lg bg-[#967d5a] px-4 py-2 text-sm font-semibold text-white transition active:bg-[#7a6548]"
+                          aria-label={cart_button_aria_label}
+                          className="flex-1 whitespace-nowrap rounded-lg bg-[#967d5a] px-4 py-2 text-sm font-semibold text-white transition active:bg-[#7a6548]"
                         >
-                          {cartQuantity > 0 ? `장바구니 (${cartQuantity})` : "담기"}
+                          {cart_button_label}
                         </button>
                       </div>
                     </div>

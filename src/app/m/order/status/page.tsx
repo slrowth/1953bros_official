@@ -2,10 +2,9 @@
  * 모바일 주문현황 페이지
  * 주문 목록 조회 및 상세
  */
-
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronRight, RefreshCw, Calendar, Package, Store, X } from "lucide-react";
 import MobileLayout from "@/components/mobile/MobileLayout";
@@ -17,36 +16,34 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDateTime } from "@/utils/formatDate";
 import { calculateOrderGrossTotal } from "@/utils/orderPrice";
 
-export default function MobileOrderStatusPage() {
+function MobileOrderStatusContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [statusFilter, setStatusFilter] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
   const [pullToRefreshY, setPullToRefreshY] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
   const { orders, loading, error, refetch } = useOrders({
     status: statusFilter !== "all" ? statusFilter : undefined,
     limit: 100,
   });
 
-  // URL에서 orderId가 있으면 해당 주문으로 스크롤
   const selectedOrderId = searchParams.get("orderId");
 
-  // 당겨서 새로고침
   useEffect(() => {
     let startY = 0;
     let currentY = 0;
 
-    const handleTouchStart = (e) => {
+    const handleTouchStart = (e: TouchEvent) => {
       if (window.scrollY === 0) {
         startY = e.touches[0].clientY;
         setIsPulling(true);
       }
     };
 
-    const handleTouchMove = (e) => {
+    const handleTouchMove = (e: TouchEvent) => {
       if (!isPulling) return;
       currentY = e.touches[0].clientY;
       const deltaY = currentY - startY;
@@ -77,15 +74,15 @@ export default function MobileOrderStatusPage() {
   }, [isPulling, pullToRefreshY, refetch]);
 
   const filteredOrders = useMemo(() => {
-    return [...orders].sort((a, b) => {
+    return [...orders].sort((a: any, b: any) => {
       const dateA = new Date(a.orderedAt);
       const dateB = new Date(b.orderedAt);
       return dateB.getTime() - dateA.getTime();
     });
   }, [orders]);
 
-  const handleOrderClick = (orderId) => {
-    const order = filteredOrders.find((o) => o.id === orderId);
+  const handleOrderClick = (orderId: string) => {
+    const order = filteredOrders.find((o: any) => o.id === orderId);
     if (order) {
       setSelectedOrder(order);
     }
@@ -133,8 +130,6 @@ export default function MobileOrderStatusPage() {
       }
     >
       <div className="flex flex-col">
-
-        {/* 당겨서 새로고침 인디케이터 */}
         {pullToRefreshY > 0 && (
           <div
             className="flex items-center justify-center border-b border-neutral-200 bg-white py-4"
@@ -146,7 +141,6 @@ export default function MobileOrderStatusPage() {
           </div>
         )}
 
-        {/* 주문 목록 */}
         {loading && !refreshing ? (
           <LoadingSpinner message="주문 내역을 불러오는 중..." />
         ) : error ? (
@@ -163,8 +157,8 @@ export default function MobileOrderStatusPage() {
           </div>
         ) : (
           <div className="px-4 pt-4 pb-4 space-y-3">
-            {filteredOrders.map((order) => {
-              const totalQuantity = order.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+            {filteredOrders.map((order: any) => {
+              const totalQuantity = order.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0;
               const totalAmount = calculateOrderGrossTotal(order);
 
               return (
@@ -197,10 +191,9 @@ export default function MobileOrderStatusPage() {
                         </div>
                       </div>
 
-                      {/* 주문 품목 미리보기 */}
                       {order.items && order.items.length > 0 && (
                         <div className="mt-3 space-y-1">
-                          {order.items.slice(0, 2).map((item) => (
+                          {order.items.slice(0, 2).map((item: any) => (
                             <div
                               key={item.id}
                               className="flex items-center justify-between rounded-lg bg-neutral-50 px-2 py-1.5 text-xs"
@@ -231,7 +224,6 @@ export default function MobileOrderStatusPage() {
           </div>
         )}
 
-        {/* 주문 상세 모달 */}
         {selectedOrder && (
           <div 
             className="fixed inset-0 z-[60] bg-black/50" 
@@ -242,7 +234,6 @@ export default function MobileOrderStatusPage() {
               onClick={(e) => e.stopPropagation()}
               style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0))' }}
             >
-              {/* 헤더 */}
               <div className="sticky top-0 flex items-center justify-between border-b border-neutral-200 bg-white p-4 z-10">
                 <h3 className="text-lg font-semibold text-slate-900">주문내역</h3>
                 <button
@@ -253,9 +244,7 @@ export default function MobileOrderStatusPage() {
                 </button>
               </div>
 
-              {/* 주문 정보 */}
               <div className="p-4 pb-6 space-y-4">
-                {/* 주문 기본 정보 */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -278,12 +267,11 @@ export default function MobileOrderStatusPage() {
                   </div>
                 </div>
 
-                {/* 주문 품목 */}
                 <div className="border-t border-neutral-200 pt-4">
                   <h4 className="mb-3 text-sm font-semibold text-slate-900">주문 품목</h4>
                   <div className="space-y-2">
                     {selectedOrder.items && selectedOrder.items.length > 0 ? (
-                      selectedOrder.items.map((item) => (
+                      selectedOrder.items.map((item: any) => (
                         <div
                           key={item.id}
                           className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5"
@@ -310,7 +298,6 @@ export default function MobileOrderStatusPage() {
                   </div>
                 </div>
 
-                {/* 총 금액 */}
                 <div className="border-t border-neutral-200 pt-4">
                   <div className="flex items-center justify-between">
                     <p className="text-base font-semibold text-slate-900">총 주문 금액</p>
@@ -320,7 +307,6 @@ export default function MobileOrderStatusPage() {
                   </div>
                 </div>
 
-                {/* 연락처 안내 */}
                 <div className="border-t border-neutral-200 pt-4 pb-2">
                   <p className="text-xs font-medium text-red-600 leading-relaxed">
                     *주문 수정과 취소는 김철민과장(010-7193-9303)께 별도 연락 바랍니다.
@@ -332,5 +318,13 @@ export default function MobileOrderStatusPage() {
         )}
       </div>
     </MobileLayout>
+  );
+}
+
+export default function MobileOrderStatusPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner message="로딩 중..." />}>
+      <MobileOrderStatusContent />
+    </Suspense>
   );
 }

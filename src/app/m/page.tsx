@@ -2,10 +2,9 @@
  * 모바일 메인 페이지
  * 대시보드 및 빠른 액션
  */
-
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ShoppingCart, ClipboardList, CheckSquare, Package, ArrowRight, Bell } from "lucide-react";
 import MobileLayout from "@/components/mobile/MobileLayout";
@@ -18,29 +17,26 @@ import { formatDate } from "@/utils/formatDate";
 import OrderStatusBadge from "@/components/common/OrderStatusBadge";
 import { createClient } from "@/lib/supabase/client";
 
-export default function MobileHomePage() {
+function MobileHomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [today] = useState(() => formatDate(new Date()));
-  const [notices, setNotices] = useState([]);
+  const [notices, setNotices] = useState<any[]>([]);
   const [noticesLoading, setNoticesLoading] = useState(true);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // 오늘 주문 조회 (인증 체크 완료 후에만 실행)
   const { orders: todayOrders, loading: ordersLoading, error: ordersError } = useOrders({
     limit: 10,
     enabled: isAuthenticated && !checkingAuth,
   });
 
-  // 오늘 품질점검 기록 조회 (인증 체크 완료 후에만 실행)
   const { records: todayRecords, loading: recordsLoading, error: recordsError } = useQualityRecords({
     date: today,
     enabled: isAuthenticated && !checkingAuth,
   });
 
-  // 클라이언트 사이드 인증 체크 (서버 사이드 체크를 보완)
   useEffect(() => {
     let isMounted = true;
 
@@ -55,7 +51,6 @@ export default function MobileHomePage() {
         if (!isMounted) return;
 
         if (authError || !authUser) {
-          // 인증되지 않은 경우 - 에러 상태로 설정하고 로그인 버튼 표시
           if (isMounted) {
             setAuthError("인증이 필요합니다. 로그인 후 이용해주세요.");
             setCheckingAuth(false);
@@ -63,7 +58,6 @@ export default function MobileHomePage() {
           return;
         }
 
-        // 사용자 정보 확인
         const { data: userData, error: userError } = await supabase
           .from("users")
           .select("role, status")
@@ -88,7 +82,6 @@ export default function MobileHomePage() {
           return;
         }
 
-        // 인증 성공
         if (isMounted) {
           setIsAuthenticated(true);
           setCheckingAuth(false);
@@ -102,7 +95,6 @@ export default function MobileHomePage() {
       }
     };
 
-    // 즉시 실행
     checkAuth();
 
     return () => {
@@ -110,9 +102,8 @@ export default function MobileHomePage() {
     };
   }, [router]);
 
-  // 공지사항 조회
   useEffect(() => {
-    if (checkingAuth || !isAuthenticated) return; // 인증 체크 완료 후에만 실행
+    if (checkingAuth || !isAuthenticated) return;
 
     const fetchNotices = async () => {
       try {
@@ -133,13 +124,12 @@ export default function MobileHomePage() {
     fetchNotices();
   }, [checkingAuth, isAuthenticated]);
 
-  // 오늘 주문 통계
   const todayStats = useMemo(() => {
     const total = todayOrders.length;
-    const totalAmount = todayOrders.reduce((sum, order) => {
+    const totalAmount = todayOrders.reduce((sum: number, order: any) => {
       return sum + (order.totalAmount || 0);
     }, 0);
-    const pendingCount = todayOrders.filter((o) => o.statusCode === "NEW" || o.statusCode === "PROCESSING").length;
+    const pendingCount = todayOrders.filter((o: any) => o.statusCode === "NEW" || o.statusCode === "PROCESSING").length;
 
     return {
       total,
@@ -148,10 +138,9 @@ export default function MobileHomePage() {
     };
   }, [todayOrders]);
 
-  // 오늘 품질점검 통계
   const qualityStats = useMemo(() => {
     const total = todayRecords.length;
-    const pendingCount = todayRecords.filter((r) => !r.completedById).length;
+    const pendingCount = todayRecords.filter((r: any) => !r.completedById).length;
 
     return {
       total,
@@ -159,14 +148,12 @@ export default function MobileHomePage() {
     };
   }, [todayRecords]);
 
-  // 읽지 않은 공지사항 개수
   const unreadNoticesCount = useMemo(() => {
-    return notices.filter((notice) => !notice.isRead).length;
+    return notices.filter((notice: any) => !notice.isRead).length;
   }, [notices]);
 
   const isLoading = ordersLoading || recordsLoading || checkingAuth;
 
-  // 인증 체크 중이면 로딩 표시
   if (checkingAuth) {
     return (
       <MobileLayout title="홈" showBackButton={false}>
@@ -177,7 +164,6 @@ export default function MobileHomePage() {
     );
   }
 
-  // 인증 에러가 있으면 에러 메시지와 로그인 버튼 표시
   if (authError) {
     return (
       <MobileLayout title="홈" showBackButton={false}>
@@ -189,7 +175,6 @@ export default function MobileHomePage() {
               onRetry={() => {
                 setCheckingAuth(true);
                 setAuthError(null);
-                // 인증 체크 다시 실행
                 const checkAuth = async () => {
                   try {
                     const supabase = createClient();
@@ -243,7 +228,6 @@ export default function MobileHomePage() {
   return (
     <MobileLayout title="홈" showBackButton={false}>
       <div className="p-4 space-y-4">
-        {/* 통계 카드 */}
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
             <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -268,7 +252,6 @@ export default function MobileHomePage() {
           </div>
         </div>
 
-        {/* 빠른 액션 */}
         <div className="space-y-2">
           <h2 className="px-1 text-sm font-semibold text-slate-700">빠른 액션</h2>
           <div className="space-y-2">
@@ -357,7 +340,6 @@ export default function MobileHomePage() {
           </div>
         </div>
 
-        {/* 최근 주문 */}
         <div className="space-y-2">
           <h2 className="px-1 text-sm font-semibold text-slate-700">최근 주문</h2>
           {isLoading ? (
@@ -372,7 +354,7 @@ export default function MobileHomePage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {todayOrders.slice(0, 5).map((order) => (
+              {todayOrders.slice(0, 5).map((order: any) => (
                 <button
                   key={order.id}
                   onClick={() => router.push(`/m/order/status?orderId=${order.id}`)}
@@ -403,5 +385,19 @@ export default function MobileHomePage() {
         </div>
       </div>
     </MobileLayout>
+  );
+}
+
+export default function MobileHomePage() {
+  return (
+    <Suspense fallback={
+      <MobileLayout title="홈" showBackButton={false}>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <LoadingSpinner message="로딩 중..." size={8} fullHeight={false} />
+        </div>
+      </MobileLayout>
+    }>
+      <MobileHomeContent />
+    </Suspense>
   );
 }

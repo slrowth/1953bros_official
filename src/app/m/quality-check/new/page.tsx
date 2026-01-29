@@ -2,10 +2,9 @@
  * 모바일 품질점검 작성 페이지
  * 체크리스트 기반 품질점검 기록 작성
  */
-
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { CheckCircle2, XCircle, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
@@ -15,25 +14,24 @@ import ErrorMessage from "@/components/common/ErrorMessage";
 import { useQualityRecords } from "@/hooks/useQualityRecords";
 import { formatDate } from "@/utils/formatDate";
 
-export default function MobileQualityCheckNewPage() {
+function MobileQualityCheckNewContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dateParam = searchParams.get("date");
-  
+
   const [selectedDate, setSelectedDate] = useState(() => dateParam || formatDate(new Date()));
-  const [checklists, setChecklists] = useState([]);
+  const [checklists, setChecklists] = useState<any[]>([]);
   const [selectedChecklistId, setSelectedChecklistId] = useState("");
-  const [checklistItems, setChecklistItems] = useState([]);
-  const [itemChecked, setItemChecked] = useState({});
-  const [itemComments, setItemComments] = useState({});
+  const [checklistItems, setChecklistItems] = useState<any[]>([]);
+  const [itemChecked, setItemChecked] = useState<Record<string, boolean>>({});
+  const [itemComments, setItemComments] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [userInfo, setUserInfo] = useState(null);
-  const [existingRecord, setExistingRecord] = useState(null);
+  const [userInfo, setUserInfo] = useState<any>(null);
+  const [existingRecord, setExistingRecord] = useState<any>(null);
 
-  // 선택한 날짜의 점검 기록 조회
   const { records, loading: recordsLoading, refetch: refetchRecords } = useQualityRecords({
     date: selectedDate,
   });
@@ -53,10 +51,9 @@ export default function MobileQualityCheckNewPage() {
     if (selectedDate && records.length > 0) {
       const record = records[0];
       setExistingRecord(record);
-      // 기존 기록이 있으면 체크 상태 복원
-      const checked = {};
-      const comments = {};
-      record.items?.forEach((item) => {
+      const checked: Record<string, boolean> = {};
+      const comments: Record<string, string> = {};
+      record.items?.forEach((item: any) => {
         checked[item.itemId] = item.status === "PASS";
         if (item.comment) {
           comments[item.itemId] = item.comment;
@@ -109,7 +106,7 @@ export default function MobileQualityCheckNewPage() {
       const data = await response.json();
 
       if (response.ok) {
-        const activeChecklists = (data.checklists || []).filter((c) => c.isActive);
+        const activeChecklists = (data.checklists || []).filter((c: any) => c.isActive);
         setChecklists(activeChecklists);
 
         if (activeChecklists.length > 0 && !selectedChecklistId) {
@@ -124,7 +121,7 @@ export default function MobileQualityCheckNewPage() {
     }
   };
 
-  const loadChecklistItems = async (checklistId) => {
+  const loadChecklistItems = async (checklistId: string) => {
     try {
       const response = await fetch(`/api/quality/checklists/${checklistId}`);
       const data = await response.json();
@@ -137,14 +134,14 @@ export default function MobileQualityCheckNewPage() {
     }
   };
 
-  const handleItemToggle = (itemId) => {
+  const handleItemToggle = (itemId: string) => {
     setItemChecked((prev) => ({
       ...prev,
       [itemId]: !prev[itemId],
     }));
   };
 
-  const handleCommentChange = (itemId, comment) => {
+  const handleCommentChange = (itemId: string, comment: string) => {
     setItemComments((prev) => ({
       ...prev,
       [itemId]: comment,
@@ -200,20 +197,20 @@ export default function MobileQualityCheckNewPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "점검 기록 저장에 실패했습니다.");
+        throw new Error(data.error || "품질 기록 저장에 실패했습니다.");
       }
 
-      alert(existingRecord ? "점검 기록이 수정되었습니다." : "점검 기록이 저장되었습니다.");
+      alert(existingRecord ? "품질 기록이 수정되었습니다." : "품질 기록이 저장되었습니다.");
       router.push("/m/quality-check");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Submit error:", err);
-      setError(err.message || "점검 기록 저장에 실패했습니다.");
+      setError(err.message || "품질 기록 저장에 실패했습니다.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const navigateDate = (direction) => {
+  const navigateDate = (direction: number) => {
     const newDate = new Date(selectedDate);
     newDate.setDate(newDate.getDate() + direction);
     setSelectedDate(formatDate(newDate));
@@ -222,7 +219,7 @@ export default function MobileQualityCheckNewPage() {
   const hasChanges = Object.keys(itemChecked).length > 0 || Object.keys(itemComments).length > 0 || notes.trim().length > 0;
 
   return (
-    <MobileLayout 
+    <MobileLayout
       title="품질점검 작성"
       headerBottomContent={
         <div className="px-4 py-3">
@@ -261,7 +258,6 @@ export default function MobileQualityCheckNewPage() {
           </div>
         ) : (
           <>
-            {/* 체크리스트 선택 */}
             {checklists.length > 1 && (
               <div className="border-b border-neutral-200 bg-white p-4">
                 <select
@@ -278,7 +274,6 @@ export default function MobileQualityCheckNewPage() {
               </div>
             )}
 
-            {/* 체크리스트 항목 */}
             {checklistItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-4">
                 <p className="text-sm text-slate-500">체크리스트 항목이 없습니다.</p>
@@ -331,7 +326,6 @@ export default function MobileQualityCheckNewPage() {
               </div>
             )}
 
-            {/* 메모 */}
             <div className="border-t border-neutral-200 bg-white p-4">
               <label className="mb-2 block text-sm font-medium text-slate-700">메모</label>
               <textarea
@@ -343,7 +337,6 @@ export default function MobileQualityCheckNewPage() {
               />
             </div>
 
-            {/* 저장 버튼 */}
             <div className="border-t border-neutral-200 bg-white p-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0))' }}>
               <button
                 onClick={handleSubmit}
@@ -358,7 +351,7 @@ export default function MobileQualityCheckNewPage() {
               </button>
               {existingRecord && (
                 <p className="mt-2 text-center text-xs text-slate-500">
-                  {formatDate(new Date(existingRecord.createdAt))}에 작성된 기록입니다
+                  {formatDate(new Date(existingRecord.createdAt))}에 작성된 기록입니다.
                 </p>
               )}
             </div>
@@ -366,5 +359,13 @@ export default function MobileQualityCheckNewPage() {
         )}
       </div>
     </MobileLayout>
+  );
+}
+
+export default function MobileQualityCheckNewPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner message="로딩 중..." />}>
+      <MobileQualityCheckNewContent />
+    </Suspense>
   );
 }

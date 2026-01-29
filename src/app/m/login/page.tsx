@@ -3,9 +3,11 @@
  * 모바일 환경에 최적화된 로그인 화면
  */
 
+
 "use client";
 
-import { useState, useEffect } from "react";
+export const dynamic = "force-dynamic";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -14,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function MobileLoginPage() {
+function MobileLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -56,7 +58,6 @@ export default function MobileLoginPage() {
 
         if (userData) {
           setUserRole(userData.role);
-          // 이미 로그인된 경우 원래 가려던 페이지 또는 모바일 메인으로 리다이렉트
           if (userData.role === "OWNER" || userData.role === "STAFF") {
             const redirectPath = searchParams.get("redirect") || "/m";
             router.push(redirectPath);
@@ -70,12 +71,11 @@ export default function MobileLoginPage() {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
-    // 입력값 검증
     if (!email || !password) {
       setError("이메일과 비밀번호를 입력해주세요.");
       setIsLoading(false);
@@ -83,7 +83,6 @@ export default function MobileLoginPage() {
     }
 
     try {
-      // Supabase 로그인 API 호출
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
@@ -98,13 +97,11 @@ export default function MobileLoginPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        // 로그인 실패
         setError(data.error || "로그인에 실패했습니다.");
         setIsLoading(false);
         return;
       }
 
-      // 사용자 상태 확인
       if (data.user?.status === "PENDING") {
         setError("회원가입 승인 대기 중입니다. 관리자 승인 후 이용 가능합니다.");
         setIsLoading(false);
@@ -117,13 +114,11 @@ export default function MobileLoginPage() {
         return;
       }
 
-      // 원래 가려던 페이지 또는 모바일 메인으로 리다이렉트
       const redirectPath = searchParams.get("redirect") || "/m";
       
       if (data.user?.role === "OWNER" || data.user?.role === "STAFF") {
         router.push(redirectPath);
       } else if (data.user?.role === "ADMIN") {
-        // 관리자는 데스크톱 관리자 페이지로
         router.push("/admin");
       } else {
         router.push(redirectPath);
@@ -151,7 +146,6 @@ export default function MobileLoginPage() {
     >
       <div className="flex flex-1 items-center justify-center px-4 py-8">
         <div className="w-full max-w-sm">
-          {/* 타이틀 */}
           <div className="mb-8 text-center">
             <h1 className="text-2xl font-bold text-slate-900">
               1953형제돼지국밥
@@ -159,12 +153,10 @@ export default function MobileLoginPage() {
             <p className="mt-2 text-xs text-slate-600">프랜차이즈 수발주 및 서비스 품질 관리 플랫폼</p>
           </div>
 
-          {/* 로그인 폼 */}
           <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-lg">
             <h2 className="mb-6 text-lg font-semibold text-slate-900">로그인</h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* 이메일 입력 */}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium text-slate-700">
                   이메일
@@ -184,7 +176,6 @@ export default function MobileLoginPage() {
                 </div>
               </div>
 
-              {/* 비밀번호 입력 */}
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-medium text-slate-700">
                   비밀번호
@@ -216,14 +207,12 @@ export default function MobileLoginPage() {
                 </div>
               </div>
 
-              {/* 에러 메시지 */}
               {error && (
                 <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
                   {error}
                 </div>
               )}
 
-              {/* 로그인 버튼 */}
               <Button
                 type="submit"
                 variant="default"
@@ -235,7 +224,6 @@ export default function MobileLoginPage() {
               </Button>
             </form>
 
-            {/* 추가 링크 */}
             <div className="mt-6 space-y-3 text-center text-sm">
               <Link
                 href="/register"
@@ -252,12 +240,23 @@ export default function MobileLoginPage() {
             </div>
           </div>
 
-          {/* 푸터 */}
           <p className="mt-6 text-center text-xs text-slate-500">
             © 2025 1953형제돼지국밥 프랜차이즈 플랫폼. All rights reserved.
           </p>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MobileLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-neutral-50">
+        <div className="text-sm text-slate-600">로딩 중...</div>
+      </div>
+    }>
+      <MobileLoginContent />
+    </Suspense>
   );
 }
