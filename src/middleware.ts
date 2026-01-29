@@ -67,8 +67,7 @@ export async function middleware(request: NextRequest) {
 // 미들웨어가 작동할 경로 설정
 export const config = {
   matcher: [
-    // 모바일 경로만 명시적으로 지정
-    // /m 또는 /m/로 시작하는 모든 경로 (정규식 패턴)
-    "^/m(/.*)?$",
+    "/m",
+    "/m/:path*",
   ],
 };
